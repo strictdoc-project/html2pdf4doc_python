@@ -1,0 +1,73 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "hpdf/hpdf.py"
+
+[tool.hatch.build]
+include = [
+    "/hpdf/",
+    "LICENSE",
+    "README.md",
+    "pyproject.toml"
+]
+
+exclude = [
+    "/submodules",
+    "/tests",
+]
+
+[project]
+name = "hpdf"
+dynamic = ["version"]
+description = "Python client for HTML2PDF JavaScript library."
+readme = "README.md"
+license = "TBD"
+requires-python = ">=3.8"
+authors = [
+    { name = "Stanislav Pankevich", email = "s.pankevich@gmail.com" },
+    { name = "Maryna Balioura", email = "mettta@gmail.com" },
+]
+classifiers = [
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+
+dependencies = [
+    # HTML2PDF dependencies
+    "selenium",
+    "webdriver-manager",
+
+    # requests is used by HTML2PDF_HTTPClient.
+    "requests",
+]
+
+[project.optional-dependencies]
+development = [
+    # Development tasks
+    "invoke>=1.4.1",
+    "tox>=4.4.8",
+]
+
+[project.scripts]
+hpdf = "hpdf:main"
+
+[project.urls]
+Changelog = "https://github.com/mettta/html2pdf_python/releases/"
+# Funding = "https://..."
+Homepage = "https://github.com/mettta/html2pdf_python/"
+Source = "https://github.com/mettta/html2pdf_python/"
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib"
+pythonpath = [
+  "."
+]
