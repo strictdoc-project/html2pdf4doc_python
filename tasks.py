@@ -1,0 +1,114 @@
+# Invoke is broken on Python 3.11
+# https://github.com/pyinvoke/invoke/issues/833#issuecomment-1293148106
+import inspect
+import os
+import re
+import sys
+from typing import Optional
+
+if not hasattr(inspect, "getargspec"):
+    inspect.getargspec = inspect.getfullargspec
+
+import invoke  # pylint: disable=wrong-import-position
+from invoke import task  # pylint: disable=wrong-import-position
+
+# Specifying encoding because Windows crashes otherwise when running Invoke
+# tasks below:
+# UnicodeEncodeError: 'charmap' codec can't encode character '\ufffd'
+# in position 16: character maps to <undefined>
+# People say, it might also be possible to export PYTHONIOENCODING=utf8 but this
+# seems to work.
+# FIXME: If you are a Windows user and expert, please advise on how to do this
+# properly.
+sys.stdout = open(  # pylint: disable=consider-using-with
+    1, "w", encoding="utf-8", closefd=False, buffering=1
+)
+
+
+def run_invoke(
+    context,
+    cmd,
+    environment: Optional[dict] = None,
+    warn: bool = False,
+) -> invoke.runners.Result:
+    def one_line_command(string):
+        return re.sub("\\s+", " ", string).strip()
+
+    return context.run(
+        one_line_command(cmd),
+        env=environment,
+        hide=False,
+        warn=warn,
+        pty=False,
+        echo=True,
+    )
+
+
+@task(default=True)
+def list_tasks(context):
+    clean_command = """
+        invoke --list
+    """
+    run_invoke(context, clean_command)
+
+
+@task
+def bootstrap(context):
+    run_invoke(context, "pip install -r requirements.txt")
+
+
+@task
+def build(context):
+    run_invoke(context, "cd submodules/html2pdf && npm install && npm run build")
+
+
+@task
+def format_readme(context):
+    run_invoke(context, """
+    prettier
+        --write --print-width 80 --prose-wrap always --parser=markdown
+        README.md
+    """)
+
+
+@task
+def test_integration(
+    context,
+    focus=None,
+    debug=False,
+):
+    clean_itest_artifacts(context)
+
+    cwd = os.getcwd()
+
+    html2pdf_exec = f'python3 \\"{cwd}/hpdf/hpdf.py\\"'
+
+    focus_or_none = f"--filter {focus}" if focus else ""
+    debug_opts = "-vv --show-all" if debug else ""
+
+    itest_command = f"""
+        lit
+        --param HTML2PDF_EXEC="{html2pdf_exec}"
+        -v
+        {debug_opts}
+        {focus_or_none}
+        tests/integration
+    """
+
+    run_invoke(context, itest_command)
+
+
+@task
+def test(context):
+    test_integration(context)
+
+
+@task
+def clean_itest_artifacts(context):
+    # https://unix.stackexchange.com/a/689930/77389
+    find_command = """
+        git clean -dfX tests/integration/
+    """
+    # The command sometimes exits with 1 even if the files are deleted.
+    # warn=True ensures that the execution continues.
+    run_invoke(context, find_command, warn=True)
