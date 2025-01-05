@@ -5,8 +5,10 @@ import base64
 import os.path
 import sys
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from shutil import copy
+from time import sleep
 from typing import Optional, List
 
 import requests
@@ -148,9 +150,30 @@ def get_pdf_from_html(driver, url) -> bytes:
     print("HTML2PDF: executing print command with Chrome Driver.")  # noqa: T201
     result = driver.execute_cdp_cmd("Page.printToPDF", calculated_print_options)
 
+    class Done(Exception): pass
+
+    datetime_start = datetime.today()
+
+    logs = None
+    try:
+        while True:
+            logs = driver.get_log("browser")
+            for entry_ in logs:
+                if "HTML2PDF4DOC time" in entry_["message"]:
+                    print("success: HTML2PDF completed its job.")
+                    raise Done
+            if (datetime.today() - datetime_start).total_seconds() > 60:
+                raise TimeoutError
+            sleep(0.5)
+    except Done:
+        pass
+    except TimeoutError:
+        print("error: could not receive a successful completion status from HTML2PDF.")
+        sys.exit(1)
+
     print("HTML2PDF: JS logs from the print session:")  # noqa: T201
     print('"""')  # noqa: T201
-    for entry in driver.get_log("browser"):
+    for entry in logs:
         print(entry)  # noqa: T201
     print('"""')  # noqa: T201
 
