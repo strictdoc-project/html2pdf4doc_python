@@ -1,0 +1,3 @@
+[submodule "submodules/html2pdf"]
+	path = submodules/html2pdf
+	url = git@github.com:mettta/html2pdf.git
