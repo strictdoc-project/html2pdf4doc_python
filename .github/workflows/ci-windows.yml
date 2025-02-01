@@ -1,0 +1,51 @@
+name: "HTML2PDF on Windows"
+
+# FIXME: Disabled until WDM detects Chrome on Windows reliably.
+# on:
+#   pull_request:
+#     branches: [ "**" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Upgrade pip
+      run: |
+        python -m pip install --upgrade pip
+
+    - name: Install minimal Python packages
+      run: |
+        pip install -r requirements.development.txt
+
+    - name: Clone HTML2PDF.js
+      run: |
+        invoke bootstrap
+
+    - name: Install HPDF dependencies.
+      run: |
+        python developer/pip_install_hpdf_deps.py
+
+    - name: Run Lint tasks
+      run: |
+        invoke lint
+
+    - name: Build HTML2PDF.js
+      run: |
+        invoke build
+
+    - name: Run tests (Bash)
+      run: |
+        invoke test
+      shell: bash
