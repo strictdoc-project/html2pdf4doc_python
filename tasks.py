@@ -54,7 +54,8 @@ def list_tasks(context):
 
 @task
 def bootstrap(context):
-    run_invoke(context, "pip install -r requirements.txt")
+    run_invoke(context, "git submodule update --init --recursive")
+    run_invoke(context, "pip install -r requirements.development.txt")
 
 
 @task
@@ -69,6 +70,11 @@ def format_readme(context):
         --write --print-width 80 --prose-wrap always --parser=markdown
         README.md
     """)
+
+
+@task
+def lint(context):
+    pass
 
 
 @task
@@ -88,6 +94,7 @@ def test_integration(
 
     itest_command = f"""
         lit
+        --threads 1
         --param HTML2PDF_EXEC="{html2pdf_exec}"
         -v
         {debug_opts}
