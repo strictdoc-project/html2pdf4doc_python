@@ -75,6 +75,7 @@ class HTML2PDF_CacheManager(DriverCacheManager):
         browser_version = self._os_system_manager.get_browser_version_from_os(
             browser_type
         )
+        assert browser_version is not None, browser_version
 
         path_to_cached_chrome_driver_dir = os.path.join(
             path_to_cached_chrome_driver_dir, browser_version, os_type
@@ -84,18 +85,18 @@ class HTML2PDF_CacheManager(DriverCacheManager):
         )
         if os.path.isfile(path_to_cached_chrome_driver):
             print(  # noqa: T201
-                f"html2pdf: chromedriver exists in StrictDoc's local cache: "
+                f"html2pdf: ChromeDriver exists in the local cache: "
                 f"{path_to_cached_chrome_driver}"
             )
             return path_to_cached_chrome_driver
         print(  # noqa: T201
-            f"html2pdf: chromedriver does not exist in StrictDoc's local cache: "
+            f"html2pdf: ChromeDriver does not exist in the local cache: "
             f"{path_to_cached_chrome_driver}"
         )
         path_to_downloaded_chrome_driver = super().find_driver(driver)
         if path_to_downloaded_chrome_driver is None:
             print(  # noqa: T201
-                f"html2pdf: could not get a downloaded Chrome driver: "
+                f"html2pdf: could not get a downloaded ChromeDriver: "
                 f"{path_to_cached_chrome_driver}"
             )
             return None
@@ -241,7 +242,7 @@ def main():
     parser.add_argument(
         "--cache-dir",
         type=str,
-        help="Optional path to a cache directory whereto the Chrome driver is downloaded.",
+        help="Optional path to a cache directory whereto the ChromeDriver is downloaded.",
     )
     parser.add_argument("paths", nargs='+', help="Paths to input HTML file.")
     args = parser.parse_args()
@@ -253,7 +254,7 @@ def main():
         if args.cache_dir is not None
         else (
             os.path.join(
-                tempfile.gettempdir(), "strictdoc_cache", "chromedriver"
+                Path.home(), ".hpdf", "chromedriver"
             )
         )
     )

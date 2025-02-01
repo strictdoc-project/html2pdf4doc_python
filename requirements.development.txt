@@ -1,4 +1,7 @@
 invoke
+toml
+packaging
+setuptools
 
 #
 # Integration tests
