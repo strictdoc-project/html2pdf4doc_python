@@ -42,7 +42,7 @@ class HTML2PDF_HTTPClient(HttpClient):
         last_error: Optional[Exception] = None
         for attempt in range(1, 3):
             print(  # noqa: T201
-                f"HTML2PDF_HTTPClient: sending GET request attempt {attempt}: {url}"
+                f"html2pdf: sending GET request attempt {attempt}: {url}"
             )
             try:
                 return requests.get(url, params, timeout=(5, 5), **kwargs)
@@ -52,10 +52,10 @@ class HTML2PDF_HTTPClient(HttpClient):
                 last_error = read_timeout_
             except Exception as exception_:
                 raise AssertionError(
-                    "HTML2PDF_HTTPClient: unknown exception", exception_
+                    "html2pdf: unknown exception", exception_
                 ) from None
         print(  # noqa: T201
-            f"HTML2PDF_HTTPClient: "
+            f"html2pdf: "
             f"failed to get response for URL: {url} with error: {last_error}"
         )
 
@@ -84,24 +84,24 @@ class HTML2PDF_CacheManager(DriverCacheManager):
         )
         if os.path.isfile(path_to_cached_chrome_driver):
             print(  # noqa: T201
-                f"HTML2PDF_CacheManager: chromedriver exists in StrictDoc's local cache: "
+                f"html2pdf: chromedriver exists in StrictDoc's local cache: "
                 f"{path_to_cached_chrome_driver}"
             )
             return path_to_cached_chrome_driver
         print(  # noqa: T201
-            f"HTML2PDF_CacheManager: chromedriver does not exist in StrictDoc's local cache: "
+            f"html2pdf: chromedriver does not exist in StrictDoc's local cache: "
             f"{path_to_cached_chrome_driver}"
         )
         path_to_downloaded_chrome_driver = super().find_driver(driver)
         if path_to_downloaded_chrome_driver is None:
             print(  # noqa: T201
-                f"HTML2PDF_CacheManager: could not get a downloaded Chrome driver: "
+                f"html2pdf: could not get a downloaded Chrome driver: "
                 f"{path_to_cached_chrome_driver}"
             )
             return None
 
         print(  # noqa: T201
-            f"HTML2PDF_CacheManager: saving chromedriver to StrictDoc's local cache: "
+            f"html2pdf: saving chromedriver to StrictDoc's local cache: "
             f"{path_to_downloaded_chrome_driver} -> {path_to_cached_chrome_driver}"
         )
         Path(path_to_cached_chrome_driver_dir).mkdir(
@@ -117,7 +117,7 @@ def get_inches_from_millimeters(mm: float) -> float:
 
 
 def get_pdf_from_html(driver, url) -> bytes:
-    print(f"HTML2PDF: opening URL with Chrome Driver: {url}")  # noqa: T201
+    print(f"html2pdf: opening URL with ChromeDriver: {url}")  # noqa: T201
 
     driver.get(url)
 
@@ -147,7 +147,7 @@ def get_pdf_from_html(driver, url) -> bytes:
         "marginRight": get_inches_from_millimeters(21),
     }
 
-    print("HTML2PDF: executing print command with Chrome Driver.")  # noqa: T201
+    print("html2pdf: executing print command with ChromeDriver.")  # noqa: T201
     result = driver.execute_cdp_cmd("Page.printToPDF", calculated_print_options)
 
     class Done(Exception): pass
@@ -171,7 +171,7 @@ def get_pdf_from_html(driver, url) -> bytes:
         print("error: could not receive a successful completion status from HTML2PDF.")
         sys.exit(1)
 
-    print("HTML2PDF: JS logs from the print session:")  # noqa: T201
+    print("html2pdf: JS logs from the print session:")  # noqa: T201
     print('"""')  # noqa: T201
     for entry in logs:
         print(entry)  # noqa: T201
@@ -182,7 +182,7 @@ def get_pdf_from_html(driver, url) -> bytes:
 
 
 def create_webdriver(chromedriver: Optional[str], path_to_cache_dir: str):
-    print("HTML2PDF: creating Chrome Driver service.", flush=True)  # noqa: T201
+    print("html2pdf: creating ChromeDriver service.", flush=True)  # noqa: T201
     if chromedriver is None:
         cache_manager = HTML2PDF_CacheManager(
             file_manager=FileManager(
@@ -198,7 +198,7 @@ def create_webdriver(chromedriver: Optional[str], path_to_cache_dir: str):
         ).install()
     else:
         path_to_chrome = chromedriver
-    print(f"HTML2PDF: Chrome Driver available at path: {path_to_chrome}")  # noqa: T201
+    print(f"html2pdf: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
 
     service = Service(path_to_chrome)
 
@@ -216,7 +216,7 @@ def create_webdriver(chromedriver: Optional[str], path_to_cache_dir: str):
     # Enable the capturing of everything in JS console.
     webdriver_options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
 
-    print("HTML2PDF: creating Chrome Driver.", flush=True)  # noqa: T201
+    print("html2pdf: creating ChromeDriver.", flush=True)  # noqa: T201
 
     driver = webdriver.Chrome(
         options=webdriver_options,
@@ -261,7 +261,7 @@ def main():
 
     @atexit.register
     def exit_handler():
-        print("HTML2PDF: exit handler: quitting the Chrome Driver.")  # noqa: T201
+        print("html2pdf: exit handler: quitting the ChromeDriver.")  # noqa: T201
         driver.quit()
 
     for separate_path_pair_ in paths:
