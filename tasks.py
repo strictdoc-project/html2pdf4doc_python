@@ -78,6 +78,18 @@ def format_readme(context):
 
 
 @task
+def get_chrome_driver(
+    context,
+):
+    run_invoke(
+        context,
+        """
+        python hpdf/hpdf.py get_driver
+    """,
+    )
+
+
+@task
 def lint_ruff_format(context):
     result: invoke.runners.Result = run_invoke(
         context,
@@ -132,13 +144,15 @@ def lint(context):
     lint_mypy(context)
 
 
-@task
+@task(aliases=["ti"])
 def test_integration(
     context,
     focus=None,
     debug=False,
 ):
     clean_itest_artifacts(context)
+
+    get_chrome_driver(context)
 
     cwd = os.getcwd()
 
@@ -163,7 +177,7 @@ def test_integration(
     run_invoke(context, itest_command)
 
 
-@task
+@task(aliases=["t"])
 def test(context):
     test_integration(context)
 
