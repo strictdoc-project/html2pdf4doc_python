@@ -4,6 +4,12 @@ packaging
 setuptools
 
 #
+# Lint
+#
+mypy>=0.910
+ruff>=0.9
+
+#
 # Integration tests
 #
 lit

@@ -60,21 +60,76 @@ def bootstrap(context):
 
 @task
 def build(context):
-    run_invoke(context, "cd submodules/html2pdf && npm install && npm run build")
+    run_invoke(
+        context, "cd submodules/html2pdf && npm install && npm run build"
+    )
 
 
 @task
 def format_readme(context):
-    run_invoke(context, """
+    run_invoke(
+        context,
+        """
     prettier
         --write --print-width 80 --prose-wrap always --parser=markdown
         README.md
-    """)
+    """,
+    )
 
 
 @task
+def lint_ruff_format(context):
+    result: invoke.runners.Result = run_invoke(
+        context,
+        """
+            ruff
+                format
+                *.py
+                hpdf/
+                tests/integration/
+        """,
+    )
+    # Ruff always exits with 0, so we handle the output.
+    if "reformatted" in result.stdout:
+        print("invoke: ruff format found issues")  # noqa: T201
+        result.exited = 1
+        raise invoke.exceptions.UnexpectedExit(result)
+
+
+@task(aliases=["lr"])
+def lint_ruff(context):
+    run_invoke(
+        context,
+        """
+            ruff check *.py hpdf/ --fix --cache-dir build/ruff
+        """,
+    )
+
+
+@task(aliases=["lm"])
+def lint_mypy(context):
+    # These checks do not seem to be useful:
+    # - import
+    # - misc
+    run_invoke(
+        context,
+        """
+            mypy hpdf/
+                --show-error-codes
+                --disable-error-code=import
+                --disable-error-code=misc
+                --cache-dir=build/mypy
+                --strict
+                --python-version=3.8
+        """,
+    )
+
+
+@task(aliases=["l"])
 def lint(context):
-    pass
+    lint_ruff_format(context)
+    lint_ruff(context)
+    lint_mypy(context)
 
 
 @task
