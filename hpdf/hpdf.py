@@ -265,8 +265,11 @@ def main():
         print("html2pdf: exit handler: quitting the ChromeDriver.")  # noqa: T201
         driver.quit()
 
-    for separate_path_pair_ in paths:
-        path_to_input_html, path_to_output_pdf = separate_path_pair_.split(":")
+    assert len(paths) % 2 == 0, f"Expecting an even number of input/output path arguments: {paths}."
+    for current_pair_idx in range(0, 2, len(paths)):
+        path_to_input_html = paths[current_pair_idx]
+        path_to_output_pdf = paths[current_pair_idx + 1]
+
         assert os.path.isfile(path_to_input_html), path_to_input_html
 
         path_to_output_pdf_dir = os.path.dirname(path_to_output_pdf)
