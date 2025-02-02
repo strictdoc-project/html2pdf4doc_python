@@ -25,6 +25,8 @@ from webdriver_manager.core.os_manager import OperationSystemManager
 
 __version__ = "0.0.1"
 
+DEFAULT_CACHE_DIR = os.path.join(Path.home(), ".hpdf", "chromedriver")
+
 # HTML2PDF.js prints unicode symbols to console. The following makes it work on
 # Windows which otherwise complains:
 # UnicodeEncodeError: 'charmap' codec can't encode characters in position 129-130: character maps to <undefined>
@@ -35,9 +37,6 @@ sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf8", closefd=False)
 
 class HTML2PDF_HTTPClient(HttpClient):
     def get(self, url, params=None, **kwargs) -> Response:
-        """
-        Add you own logic here like session or proxy etc.
-        """
         last_error: Optional[Exception] = None
         for attempt in range(1, 3):
             print(  # noqa: T201
@@ -147,9 +146,6 @@ def get_pdf_from_html(driver, url) -> bytes:
         "marginRight": get_inches_from_millimeters(21),
     }
 
-    print("html2pdf: executing print command with ChromeDriver.")  # noqa: T201
-    result = driver.execute_cdp_cmd("Page.printToPDF", calculated_print_options)
-
     class Done(Exception):
         pass
 
@@ -180,25 +176,33 @@ def get_pdf_from_html(driver, url) -> bytes:
         print(entry)  # noqa: T201
     print('"""')  # noqa: T201
 
+    #
+    # Execute Print command with ChromeDriver.
+    #
+    print("html2pdf: executing print command with ChromeDriver.")  # noqa: T201
+    result = driver.execute_cdp_cmd("Page.printToPDF", calculated_print_options)
+
     data = base64.b64decode(result["data"])
     return data
 
 
-def create_webdriver(chromedriver: Optional[str], path_to_cache_dir: str):
-    print("html2pdf: creating ChromeDriver service.", flush=True)  # noqa: T201
-    if chromedriver is None:
-        cache_manager = HTML2PDF_CacheManager(
-            file_manager=FileManager(
-                os_system_manager=OperationSystemManager()
-            ),
-            path_to_cache_dir=path_to_cache_dir,
-        )
+def get_chrome_driver(path_to_cache_dir: str) -> str:
+    cache_manager = HTML2PDF_CacheManager(
+        file_manager=FileManager(os_system_manager=OperationSystemManager()),
+        path_to_cache_dir=path_to_cache_dir,
+    )
 
-        http_client = HTML2PDF_HTTPClient()
-        download_manager = WDMDownloadManager(http_client)
-        path_to_chrome = ChromeDriverManager(
-            download_manager=download_manager, cache_manager=cache_manager
-        ).install()
+    http_client = HTML2PDF_HTTPClient()
+    download_manager = WDMDownloadManager(http_client)
+    path_to_chrome = ChromeDriverManager(
+        download_manager=download_manager, cache_manager=cache_manager
+    ).install()
+    return path_to_chrome
+
+
+def create_webdriver(chromedriver: Optional[str], path_to_cache_dir: str):
+    if chromedriver is None:
+        path_to_chrome = get_chrome_driver(path_to_cache_dir)
     else:
         path_to_chrome = chromedriver
     print(f"html2pdf: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
@@ -236,50 +240,99 @@ def main():
     os.environ["WDM_LOCAL"] = "1"
 
     parser = argparse.ArgumentParser(description="HTML2PDF printer script.")
+
     parser.add_argument(
-        "--chromedriver",
-        type=str,
-        help="Optional chromedriver path. Downloaded if not given.",
+        "-v", "--version", action="version", version=__version__
     )
-    parser.add_argument(
+
+    command_subparsers = parser.add_subparsers(title="command", dest="command")
+    command_subparsers.required = True
+
+    #
+    # Get driver command.
+    #
+    command_parser_get_driver = command_subparsers.add_parser(
+        "get_driver",
+        help="Check if ChromeDriver already exists locally. If not, download it.",
+        description="",
+    )
+    command_parser_get_driver.add_argument(
         "--cache-dir",
         type=str,
         help="Optional path to a cache directory whereto the ChromeDriver is downloaded.",
     )
-    parser.add_argument("paths", nargs="+", help="Paths to input HTML file.")
+
+    #
+    # Print command.
+    #
+    command_parser_print = command_subparsers.add_parser(
+        "print",
+        help="Main print command",
+        description="",
+    )
+    command_parser_print.add_argument(
+        "--chromedriver",
+        type=str,
+        help="Optional chromedriver path. Downloaded if not given.",
+    )
+    command_parser_print.add_argument(
+        "--cache-dir",
+        type=str,
+        help="Optional path to a cache directory whereto the ChromeDriver is downloaded.",
+    )
+    command_parser_print.add_argument(
+        "paths", nargs="+", help="Paths to input HTML file."
+    )
+
     args = parser.parse_args()
 
-    paths: List[str] = args.paths
+    path_to_cache_dir: str
+    if args.command == "get_driver":
+        path_to_cache_dir = (
+            args.cache_dir
+            if args.cache_dir is not None
+            else (DEFAULT_CACHE_DIR)
+        )
 
-    path_to_cache_dir: str = (
-        args.cache_dir
-        if args.cache_dir is not None
-        else (os.path.join(Path.home(), ".hpdf", "chromedriver"))
-    )
-    driver = create_webdriver(args.chromedriver, path_to_cache_dir)
+        path_to_chrome = get_chrome_driver(path_to_cache_dir)
+        print(f"html2pdf: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
+        sys.exit(0)
 
-    @atexit.register
-    def exit_handler():
-        print("html2pdf: exit handler: quitting the ChromeDriver.")  # noqa: T201
-        driver.quit()
+    elif args.command == "print":
+        paths: List[str] = args.paths
 
-    assert len(paths) % 2 == 0, (
-        f"Expecting an even number of input/output path arguments: {paths}."
-    )
-    for current_pair_idx in range(0, 2, len(paths)):
-        path_to_input_html = paths[current_pair_idx]
-        path_to_output_pdf = paths[current_pair_idx + 1]
+        path_to_cache_dir = (
+            args.cache_dir
+            if args.cache_dir is not None
+            else (DEFAULT_CACHE_DIR)
+        )
+        driver = create_webdriver(args.chromedriver, path_to_cache_dir)
 
-        assert os.path.isfile(path_to_input_html), path_to_input_html
+        @atexit.register
+        def exit_handler():
+            print("html2pdf: exit handler: quitting the ChromeDriver.")  # noqa: T201
+            driver.quit()
 
-        path_to_output_pdf_dir = os.path.dirname(path_to_output_pdf)
-        Path(path_to_output_pdf_dir).mkdir(parents=True, exist_ok=True)
+        assert len(paths) % 2 == 0, (
+            f"Expecting an even number of input/output path arguments: {paths}."
+        )
+        for current_pair_idx in range(0, 2, len(paths)):
+            path_to_input_html = paths[current_pair_idx]
+            path_to_output_pdf = paths[current_pair_idx + 1]
 
-        url = Path(os.path.abspath(path_to_input_html)).as_uri()
+            assert os.path.isfile(path_to_input_html), path_to_input_html
 
-        pdf_bytes = get_pdf_from_html(driver, url)
-        with open(path_to_output_pdf, "wb") as f:
-            f.write(pdf_bytes)
+            path_to_output_pdf_dir = os.path.dirname(path_to_output_pdf)
+            Path(path_to_output_pdf_dir).mkdir(parents=True, exist_ok=True)
+
+            url = Path(os.path.abspath(path_to_input_html)).as_uri()
+
+            pdf_bytes = get_pdf_from_html(driver, url)
+            with open(path_to_output_pdf, "wb") as f:
+                f.write(pdf_bytes)
+    else:
+        print("html2pdf: unknown command.")  # noqa: T201
+        sys.exit(1)
 
 
 if __name__ == "__main__":

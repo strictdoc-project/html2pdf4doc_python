@@ -66,6 +66,10 @@ jobs:
       run: |
         invoke build
 
+    - name: Download ChromeDriver
+      run: |
+        python hpdf/hpdf.py get_driver
+
     - name: Run tests (Bash)
       run: |
         invoke test
