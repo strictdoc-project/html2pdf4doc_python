@@ -4,12 +4,11 @@ import atexit
 import base64
 import os.path
 import sys
-import tempfile
 from datetime import datetime
 from pathlib import Path
 from shutil import copy
 from time import sleep
-from typing import Optional, List
+from typing import Dict, List, Optional
 
 import requests
 from requests import Response
@@ -151,17 +150,18 @@ def get_pdf_from_html(driver, url) -> bytes:
     print("html2pdf: executing print command with ChromeDriver.")  # noqa: T201
     result = driver.execute_cdp_cmd("Page.printToPDF", calculated_print_options)
 
-    class Done(Exception): pass
+    class Done(Exception):
+        pass
 
     datetime_start = datetime.today()
 
-    logs = None
+    logs: List[Dict[str, str]] = []
     try:
         while True:
             logs = driver.get_log("browser")
             for entry_ in logs:
                 if "HTML2PDF4DOC time" in entry_["message"]:
-                    print("success: HTML2PDF completed its job.")
+                    print("success: HTML2PDF completed its job.")  # noqa: T201
                     raise Done
             if (datetime.today() - datetime_start).total_seconds() > 60:
                 raise TimeoutError
@@ -169,7 +169,9 @@ def get_pdf_from_html(driver, url) -> bytes:
     except Done:
         pass
     except TimeoutError:
-        print("error: could not receive a successful completion status from HTML2PDF.")
+        print(  # noqa: T201
+            "error: could not receive a successful completion status from HTML2PDF."
+        )
         sys.exit(1)
 
     print("html2pdf: JS logs from the print session:")  # noqa: T201
@@ -244,7 +246,7 @@ def main():
         type=str,
         help="Optional path to a cache directory whereto the ChromeDriver is downloaded.",
     )
-    parser.add_argument("paths", nargs='+', help="Paths to input HTML file.")
+    parser.add_argument("paths", nargs="+", help="Paths to input HTML file.")
     args = parser.parse_args()
 
     paths: List[str] = args.paths
@@ -252,11 +254,7 @@ def main():
     path_to_cache_dir: str = (
         args.cache_dir
         if args.cache_dir is not None
-        else (
-            os.path.join(
-                Path.home(), ".hpdf", "chromedriver"
-            )
-        )
+        else (os.path.join(Path.home(), ".hpdf", "chromedriver"))
     )
     driver = create_webdriver(args.chromedriver, path_to_cache_dir)
 
@@ -265,7 +263,9 @@ def main():
         print("html2pdf: exit handler: quitting the ChromeDriver.")  # noqa: T201
         driver.quit()
 
-    assert len(paths) % 2 == 0, f"Expecting an even number of input/output path arguments: {paths}."
+    assert len(paths) % 2 == 0, (
+        f"Expecting an even number of input/output path arguments: {paths}."
+    )
     for current_pair_idx in range(0, 2, len(paths)):
         path_to_input_html = paths[current_pair_idx]
         path_to_output_pdf = paths[current_pair_idx + 1]
