@@ -61,7 +61,7 @@ development = [
 ]
 
 [project.scripts]
-html2print = "html2print:main"
+html2print = "html2print.html2print:main"
 
 [project.urls]
 Changelog = "https://github.com/mettta/html2pdf_python/releases/"

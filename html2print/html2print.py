@@ -23,7 +23,7 @@ from webdriver_manager.core.file_manager import FileManager
 from webdriver_manager.core.http import HttpClient
 from webdriver_manager.core.os_manager import OperationSystemManager
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 DEFAULT_CACHE_DIR = os.path.join(Path.home(), ".html2print", "chromedriver")
 
