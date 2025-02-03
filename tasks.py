@@ -84,7 +84,7 @@ def get_chrome_driver(
     run_invoke(
         context,
         """
-        python hpdf/hpdf.py get_driver
+        python html2print/html2print.py get_driver
     """,
     )
 
@@ -97,7 +97,7 @@ def lint_ruff_format(context):
             ruff
                 format
                 *.py
-                hpdf/
+                html2print/
                 tests/integration/
         """,
     )
@@ -113,7 +113,7 @@ def lint_ruff(context):
     run_invoke(
         context,
         """
-            ruff check *.py hpdf/ --fix --cache-dir build/ruff
+            ruff check *.py html2print/ --fix --cache-dir build/ruff
         """,
     )
 
@@ -126,7 +126,7 @@ def lint_mypy(context):
     run_invoke(
         context,
         """
-            mypy hpdf/
+            mypy html2print/
                 --show-error-codes
                 --disable-error-code=import
                 --disable-error-code=misc
@@ -156,7 +156,7 @@ def test_integration(
 
     cwd = os.getcwd()
 
-    html2pdf_exec = f'python3 \\"{cwd}/hpdf/hpdf.py\\"'
+    html2pdf_exec = f'python3 \\"{cwd}/html2print/html2print.py\\"'
 
     focus_or_none = f"--filter {focus}" if focus else ""
     debug_opts = "-vv --show-all" if debug else ""
@@ -167,7 +167,7 @@ def test_integration(
     itest_command = f"""
         lit
         --threads 1
-        --param HTML2PDF_EXEC="{html2pdf_exec}"
+        --param HTML2PRINT_EXEC="{html2pdf_exec}"
         -v
         {debug_opts}
         {focus_or_none}
@@ -191,3 +191,57 @@ def clean_itest_artifacts(context):
     # The command sometimes exits with 1 even if the files are deleted.
     # warn=True ensures that the execution continues.
     run_invoke(context, find_command, warn=True)
+
+
+@task
+def release(context, test_pypi=False, username=None, password=None):
+    """
+    A release can be made to PyPI or test package index (TestPyPI):
+    https://pypi.org/project/html2print/
+    https://test.pypi.org/project/html2print/
+    """
+
+    # When a username is provided, we also need password, and then we don't use
+    # tokens set up on a local machine.
+    assert username is None or password is not None
+
+    repository_argument_or_none = (
+        ""
+        if username
+        else (
+            "--repository html2print_test"
+            if test_pypi
+            else "--repository html2print_release"
+        )
+    )
+    user_password = f"-u{username} -p{password}" if username is not None else ""
+
+    run_invoke(
+        context,
+        """
+            rm -rfv dist/
+        """,
+    )
+    run_invoke(
+        context,
+        """
+            python3 -m build
+        """,
+    )
+    run_invoke(
+        context,
+        """
+            twine check dist/*
+        """,
+    )
+    # The token is in a core developer's .pypirc file.
+    # https://test.pypi.org/manage/account/token/
+    # https://packaging.python.org/en/latest/specifications/pypirc/#pypirc
+    run_invoke(
+        context,
+        f"""
+            twine upload dist/html2print-*.tar.gz
+                {repository_argument_or_none}
+                {user_password}
+        """,
+    )

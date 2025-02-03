@@ -23,9 +23,9 @@ from webdriver_manager.core.file_manager import FileManager
 from webdriver_manager.core.http import HttpClient
 from webdriver_manager.core.os_manager import OperationSystemManager
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
-DEFAULT_CACHE_DIR = os.path.join(Path.home(), ".hpdf", "chromedriver")
+DEFAULT_CACHE_DIR = os.path.join(Path.home(), ".html2print", "chromedriver")
 
 # HTML2PDF.js prints unicode symbols to console. The following makes it work on
 # Windows which otherwise complains:
@@ -35,7 +35,7 @@ DEFAULT_CACHE_DIR = os.path.join(Path.home(), ".hpdf", "chromedriver")
 sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf8", closefd=False)
 
 
-class HTML2PDF_HTTPClient(HttpClient):
+class HTML2Print_HTTPClient(HttpClient):
     def get(self, url, params=None, **kwargs) -> Response:
         last_error: Optional[Exception] = None
         for attempt in range(1, 3):
@@ -58,7 +58,7 @@ class HTML2PDF_HTTPClient(HttpClient):
         )
 
 
-class HTML2PDF_CacheManager(DriverCacheManager):
+class HTML2Print_CacheManager(DriverCacheManager):
     def __init__(self, file_manager: FileManager, path_to_cache_dir: str):
         super().__init__(file_manager=file_manager)
         self.path_to_cache_dir: str = path_to_cache_dir
@@ -187,12 +187,12 @@ def get_pdf_from_html(driver, url) -> bytes:
 
 
 def get_chrome_driver(path_to_cache_dir: str) -> str:
-    cache_manager = HTML2PDF_CacheManager(
+    cache_manager = HTML2Print_CacheManager(
         file_manager=FileManager(os_system_manager=OperationSystemManager()),
         path_to_cache_dir=path_to_cache_dir,
     )
 
-    http_client = HTML2PDF_HTTPClient()
+    http_client = HTML2Print_HTTPClient()
     download_manager = WDMDownloadManager(http_client)
     path_to_chrome = ChromeDriverManager(
         download_manager=download_manager, cache_manager=cache_manager
@@ -239,7 +239,7 @@ def main():
     # You can override this setting and save binaries to project.root/.wdm.
     os.environ["WDM_LOCAL"] = "1"
 
-    parser = argparse.ArgumentParser(description="HTML2PDF printer script.")
+    parser = argparse.ArgumentParser(description="HTML2Print printer script.")
 
     parser.add_argument(
         "-v", "--version", action="version", version=__version__

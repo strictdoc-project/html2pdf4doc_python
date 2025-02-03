@@ -56,7 +56,7 @@ jobs:
 
     - name: Install HPDF dependencies.
       run: |
-        python developer/pip_install_hpdf_deps.py
+        python developer/pip_install_html2print_deps.py
 
     - name: Run Lint tasks
       run: |
@@ -68,7 +68,7 @@ jobs:
 
     - name: Download ChromeDriver
       run: |
-        python hpdf/hpdf.py get_driver
+        python html2print/html2print.py get_driver
 
     - name: Run tests (Bash)
       run: |
