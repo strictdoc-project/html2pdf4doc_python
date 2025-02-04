@@ -23,7 +23,7 @@ from webdriver_manager.core.file_manager import FileManager
 from webdriver_manager.core.http import HttpClient
 from webdriver_manager.core.os_manager import OperationSystemManager
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 DEFAULT_CACHE_DIR = os.path.join(Path.home(), ".html2print", "chromedriver")
 
@@ -316,7 +316,7 @@ def main():
         assert len(paths) % 2 == 0, (
             f"Expecting an even number of input/output path arguments: {paths}."
         )
-        for current_pair_idx in range(0, 2, len(paths)):
+        for current_pair_idx in range(0, len(paths), 2):
             path_to_input_html = paths[current_pair_idx]
             path_to_output_pdf = paths[current_pair_idx + 1]
 
