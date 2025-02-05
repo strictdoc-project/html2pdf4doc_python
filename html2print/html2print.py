@@ -23,7 +23,7 @@ from webdriver_manager.core.file_manager import FileManager
 from webdriver_manager.core.http import HttpClient
 from webdriver_manager.core.os_manager import OperationSystemManager
 
-__version__ = "0.0.3"
+__version__ = "0.0.5"
 
 DEFAULT_CACHE_DIR = os.path.join(Path.home(), ".html2print", "chromedriver")
 
@@ -40,7 +40,7 @@ class HTML2Print_HTTPClient(HttpClient):
         last_error: Optional[Exception] = None
         for attempt in range(1, 3):
             print(  # noqa: T201
-                f"html2pdf: sending GET request attempt {attempt}: {url}"
+                f"html2print: sending GET request attempt {attempt}: {url}"
             )
             try:
                 return requests.get(url, params, timeout=(5, 5), **kwargs)
@@ -50,10 +50,10 @@ class HTML2Print_HTTPClient(HttpClient):
                 last_error = read_timeout_
             except Exception as exception_:
                 raise AssertionError(
-                    "html2pdf: unknown exception", exception_
+                    "html2print: unknown exception", exception_
                 ) from None
         print(  # noqa: T201
-            f"html2pdf: "
+            f"html2print: "
             f"failed to get response for URL: {url} with error: {last_error}"
         )
 
@@ -83,24 +83,24 @@ class HTML2Print_CacheManager(DriverCacheManager):
         )
         if os.path.isfile(path_to_cached_chrome_driver):
             print(  # noqa: T201
-                f"html2pdf: ChromeDriver exists in the local cache: "
+                f"html2print: ChromeDriver exists in the local cache: "
                 f"{path_to_cached_chrome_driver}"
             )
             return path_to_cached_chrome_driver
         print(  # noqa: T201
-            f"html2pdf: ChromeDriver does not exist in the local cache: "
+            f"html2print: ChromeDriver does not exist in the local cache: "
             f"{path_to_cached_chrome_driver}"
         )
         path_to_downloaded_chrome_driver = super().find_driver(driver)
         if path_to_downloaded_chrome_driver is None:
             print(  # noqa: T201
-                f"html2pdf: could not get a downloaded ChromeDriver: "
+                f"html2print: could not get a downloaded ChromeDriver: "
                 f"{path_to_cached_chrome_driver}"
             )
             return None
 
         print(  # noqa: T201
-            f"html2pdf: saving chromedriver to StrictDoc's local cache: "
+            f"html2print: saving chromedriver to StrictDoc's local cache: "
             f"{path_to_downloaded_chrome_driver} -> {path_to_cached_chrome_driver}"
         )
         Path(path_to_cached_chrome_driver_dir).mkdir(
@@ -116,7 +116,7 @@ def get_inches_from_millimeters(mm: float) -> float:
 
 
 def get_pdf_from_html(driver, url) -> bytes:
-    print(f"html2pdf: opening URL with ChromeDriver: {url}")  # noqa: T201
+    print(f"html2print: opening URL with ChromeDriver: {url}")  # noqa: T201
 
     driver.get(url)
 
@@ -170,7 +170,7 @@ def get_pdf_from_html(driver, url) -> bytes:
         )
         sys.exit(1)
 
-    print("html2pdf: JS logs from the print session:")  # noqa: T201
+    print("html2print: JS logs from the print session:")  # noqa: T201
     print('"""')  # noqa: T201
     for entry in logs:
         print(entry)  # noqa: T201
@@ -179,7 +179,7 @@ def get_pdf_from_html(driver, url) -> bytes:
     #
     # Execute Print command with ChromeDriver.
     #
-    print("html2pdf: executing print command with ChromeDriver.")  # noqa: T201
+    print("html2print: executing print command with ChromeDriver.")  # noqa: T201
     result = driver.execute_cdp_cmd("Page.printToPDF", calculated_print_options)
 
     data = base64.b64decode(result["data"])
@@ -205,7 +205,7 @@ def create_webdriver(chromedriver: Optional[str], path_to_cache_dir: str):
         path_to_chrome = get_chrome_driver(path_to_cache_dir)
     else:
         path_to_chrome = chromedriver
-    print(f"html2pdf: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
+    print(f"html2print: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
 
     service = Service(path_to_chrome)
 
@@ -223,7 +223,7 @@ def create_webdriver(chromedriver: Optional[str], path_to_cache_dir: str):
     # Enable the capturing of everything in JS console.
     webdriver_options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
 
-    print("html2pdf: creating ChromeDriver.", flush=True)  # noqa: T201
+    print("html2print: creating ChromeDriver.", flush=True)  # noqa: T201
 
     driver = webdriver.Chrome(
         options=webdriver_options,
@@ -295,7 +295,7 @@ def main():
         )
 
         path_to_chrome = get_chrome_driver(path_to_cache_dir)
-        print(f"html2pdf: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
+        print(f"html2print: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
         sys.exit(0)
 
     elif args.command == "print":
@@ -310,13 +310,13 @@ def main():
 
         @atexit.register
         def exit_handler():
-            print("html2pdf: exit handler: quitting the ChromeDriver.")  # noqa: T201
+            print("html2print: exit handler: quitting the ChromeDriver.")  # noqa: T201
             driver.quit()
 
         assert len(paths) % 2 == 0, (
             f"Expecting an even number of input/output path arguments: {paths}."
         )
-        for current_pair_idx in range(0, 2, len(paths)):
+        for current_pair_idx in range(0, len(paths), 2):
             path_to_input_html = paths[current_pair_idx]
             path_to_output_pdf = paths[current_pair_idx + 1]
 
@@ -331,7 +331,7 @@ def main():
             with open(path_to_output_pdf, "wb") as f:
                 f.write(pdf_bytes)
     else:
-        print("html2pdf: unknown command.")  # noqa: T201
+        print("html2print: unknown command.")  # noqa: T201
         sys.exit(1)
 
 

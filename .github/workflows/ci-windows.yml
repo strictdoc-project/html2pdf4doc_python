@@ -24,7 +24,7 @@ jobs:
 
     - name: Install Google Chrome
       run: |
-        choco install googlechrome --no-progress -y
+        choco install googlechrome --no-progress -y --ignore-checksums
       shell: powershell
 
     - name: Check Chrome Version
