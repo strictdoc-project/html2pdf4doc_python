@@ -23,7 +23,11 @@ from webdriver_manager.core.file_manager import FileManager
 from webdriver_manager.core.http import HttpClient
 from webdriver_manager.core.os_manager import OperationSystemManager
 
-__version__ = "0.0.5"
+__version__ = "0.0.7"
+
+PATH_TO_HTML2PDF_JS = os.path.join(
+    os.path.dirname(os.path.join(__file__)), "html2pdf_js", "html2pdf.min.js"
+)
 
 DEFAULT_CACHE_DIR = os.path.join(Path.home(), ".html2print", "chromedriver")
 
@@ -238,6 +242,12 @@ def main():
     # By default, all driver binaries are saved to user.home/.wdm folder.
     # You can override this setting and save binaries to project.root/.wdm.
     os.environ["WDM_LOCAL"] = "1"
+
+    if not os.path.isfile(PATH_TO_HTML2PDF_JS):
+        raise RuntimeError(
+            f"Corrupted html2print package bundle. "
+            f"The HTML2PDF.js file is missing at path: {PATH_TO_HTML2PDF_JS}."
+        )
 
     parser = argparse.ArgumentParser(description="HTML2Print printer script.")
 

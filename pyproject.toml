@@ -6,11 +6,14 @@ build-backend = "hatchling.build"
 path = "html2print/html2print.py"
 
 [tool.hatch.build]
+# We want HTML2PDF.js to be gitignored, but we want it to make into the dist/
+# folder, into both tar.gz and .whl when the Pip package is built.
+# This option prevents Hatch from using .gitignore to exclude files.
+ignore-vcs = true
+
 include = [
-    "/html2print/",
-    "LICENSE",
-    "README.md",
-    "pyproject.toml"
+    "html2print/html2print.py",
+    "html2print/html2pdf_js/html2pdf.min.js",
 ]
 
 exclude = [
