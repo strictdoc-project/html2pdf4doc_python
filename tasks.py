@@ -64,12 +64,13 @@ def build(context):
         context, "cd submodules/html2pdf && npm install && npm run build"
     )
     # Windows can't do slashes for this one.
-    run_invoke(
-        context,
-        """
-        cd html2print && mkdir html2pdf_js
-        """,
-    )
+    if not os.path.isdir(os.path.join("html2print", "html2pdf_js")):
+        run_invoke(
+            context,
+            """
+            cd html2print && mkdir html2pdf_js
+            """,
+        )
     run_invoke(
         context,
         """
