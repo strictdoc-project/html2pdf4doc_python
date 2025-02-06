@@ -58,10 +58,23 @@ def bootstrap(context):
     run_invoke(context, "pip install -r requirements.development.txt")
 
 
-@task
+@task(aliases=["b"])
 def build(context):
     run_invoke(
         context, "cd submodules/html2pdf && npm install && npm run build"
+    )
+    # Windows can't do slashes for this one.
+    run_invoke(
+        context,
+        """
+        cd html2print && mkdir html2pdf_js
+        """,
+    )
+    run_invoke(
+        context,
+        """
+        cp submodules/html2pdf/dist/bundle.js html2print/html2pdf_js/html2pdf.min.js
+        """,
     )
 
 
@@ -194,27 +207,8 @@ def clean_itest_artifacts(context):
 
 
 @task
-def release(context, test_pypi=False, username=None, password=None):
-    """
-    A release can be made to PyPI or test package index (TestPyPI):
-    https://pypi.org/project/html2print/
-    https://test.pypi.org/project/html2print/
-    """
-
-    # When a username is provided, we also need password, and then we don't use
-    # tokens set up on a local machine.
-    assert username is None or password is not None
-
-    repository_argument_or_none = (
-        ""
-        if username
-        else (
-            "--repository html2print_test"
-            if test_pypi
-            else "--repository html2print_release"
-        )
-    )
-    user_password = f"-u{username} -p{password}" if username is not None else ""
+def package(context):
+    build(context)
 
     run_invoke(
         context,
@@ -234,6 +228,33 @@ def release(context, test_pypi=False, username=None, password=None):
             twine check dist/*
         """,
     )
+
+
+@task
+def release(context, test_pypi=False, username=None, password=None):
+    """
+    A release can be made to PyPI or test package index (TestPyPI):
+    https://pypi.org/project/html2print/
+    https://test.pypi.org/project/html2print/
+    """
+
+    # When a username is provided, we also need password, and then we don't use
+    # tokens set up on a local machine.
+    assert username is None or password is not None
+
+    package(context)
+
+    repository_argument_or_none = (
+        ""
+        if username
+        else (
+            "--repository html2print_test"
+            if test_pypi
+            else "--repository html2print_release"
+        )
+    )
+    user_password = f"-u{username} -p{password}" if username is not None else ""
+
     # The token is in a core developer's .pypirc file.
     # https://test.pypi.org/manage/account/token/
     # https://packaging.python.org/en/latest/specifications/pypirc/#pypirc
