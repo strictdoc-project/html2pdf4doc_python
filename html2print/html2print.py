@@ -3,10 +3,13 @@ import argparse
 import atexit
 import base64
 import os.path
+import platform
+import re
+import subprocess
 import sys
+import zipfile
 from datetime import datetime
 from pathlib import Path
-from shutil import copy
 from time import sleep
 from typing import Dict, List, Optional
 
@@ -15,15 +18,9 @@ from requests import Response
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.core.download_manager import WDMDownloadManager
-from webdriver_manager.core.driver import Driver
-from webdriver_manager.core.driver_cache import DriverCacheManager
-from webdriver_manager.core.file_manager import FileManager
-from webdriver_manager.core.http import HttpClient
-from webdriver_manager.core.os_manager import OperationSystemManager
+from webdriver_manager.core.os_manager import ChromeType, OperationSystemManager
 
-__version__ = "0.0.8"
+__version__ = "0.0.12"
 
 PATH_TO_HTML2PDF_JS = os.path.join(
     os.path.dirname(os.path.join(__file__)), "html2pdf_js", "html2pdf.min.js"
@@ -39,10 +36,123 @@ DEFAULT_CACHE_DIR = os.path.join(Path.home(), ".html2print", "chromedriver")
 sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf8", closefd=False)
 
 
-class HTML2Print_HTTPClient(HttpClient):
-    def get(self, url, params=None, **kwargs) -> Response:
+class ChromeDriverManager:
+    def get_chrome_driver(self, path_to_cache_dir: str):
+        chrome_version = self.get_chrome_version()
+        chrome_major_version = chrome_version.split(".")[0]
+
+        print(  # noqa: T201
+            f"html2print: Installed Chrome version: {chrome_version}"
+        )
+
+        system_map = {
+            "Windows": "win32",
+            "Darwin": "mac-arm64"
+            if platform.machine() == "arm64"
+            else "mac-x64",
+            "Linux": "linux64",
+        }
+        os_type = system_map[platform.system()]
+        is_windows = platform.system() == "Windows"
+
+        print(  # noqa: T201
+            f"html2print: OS system: {platform.system()}, OS type: {os_type}."
+        )
+
+        path_to_cached_chrome_driver_dir = os.path.join(
+            path_to_cache_dir, chrome_major_version
+        )
+        path_to_cached_chrome_driver = os.path.join(
+            path_to_cached_chrome_driver_dir,
+            f"chromedriver-{os_type}",
+            "chromedriver",
+        )
+        if is_windows:
+            path_to_cached_chrome_driver += ".exe"
+
+        if os.path.isfile(path_to_cached_chrome_driver):
+            print(  # noqa: T201
+                f"html2print: ChromeDriver exists in the local cache: "
+                f"{path_to_cached_chrome_driver}"
+            )
+            return path_to_cached_chrome_driver
+        print(  # noqa: T201
+            f"html2print: ChromeDriver does not exist in the local cache: "
+            f"{path_to_cached_chrome_driver}"
+        )
+
+        path_to_downloaded_chrome_driver = self._download_chromedriver(
+            chrome_major_version,
+            os_type,
+            path_to_cached_chrome_driver_dir,
+            path_to_cached_chrome_driver,
+        )
+        assert os.path.isfile(path_to_downloaded_chrome_driver)
+        os.chmod(path_to_downloaded_chrome_driver, 0o755)
+
+        return path_to_downloaded_chrome_driver
+
+    @staticmethod
+    def _download_chromedriver(
+        chrome_major_version,
+        os_type: str,
+        path_to_driver_cache_dir,
+        path_to_cached_chrome_driver,
+    ):
+        url = "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json"
+        response = ChromeDriverManager.send_http_get_request(url).json()
+
+        matching_versions = [
+            item
+            for item in response["versions"]
+            if item["version"].startswith(chrome_major_version)
+        ]
+
+        if not matching_versions:
+            raise Exception(
+                f"No compatible ChromeDriver found for Chrome version {chrome_major_version}"
+            )
+
+        latest_version = matching_versions[-1]
+
+        driver_url: str
+        chrome_downloadable_versions = latest_version["downloads"][
+            "chromedriver"
+        ]
+        for chrome_downloadable_version_ in chrome_downloadable_versions:
+            if chrome_downloadable_version_["platform"] == os_type:
+                driver_url = chrome_downloadable_version_["url"]
+                break
+        else:
+            raise RuntimeError(
+                f"Could not find a downloadable URL from downloadable versions: {chrome_downloadable_versions}"
+            )
+
+        print(  # noqa: T201
+            f"html2print: downloading ChromeDriver from: {driver_url}"
+        )
+        response = ChromeDriverManager.send_http_get_request(driver_url)
+
+        Path(path_to_driver_cache_dir).mkdir(parents=True, exist_ok=True)
+        zip_path = os.path.join(path_to_driver_cache_dir, "chromedriver.zip")
+        print(  # noqa: T201
+            f"html2print: saving downloaded ChromeDriver to path: {zip_path}"
+        )
+        with open(zip_path, "wb") as file:
+            file.write(response.content)
+
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            zip_ref.extractall(path_to_driver_cache_dir)
+
+        print(  # noqa: T201
+            f"html2print: ChromeDriver downloaded to: {path_to_cached_chrome_driver}"
+        )
+        return path_to_cached_chrome_driver
+
+    @staticmethod
+    def send_http_get_request(url, params=None, **kwargs) -> Response:
         last_error: Optional[Exception] = None
-        for attempt in range(1, 3):
+        for attempt in range(1, 4):
             print(  # noqa: T201
                 f"html2print: sending GET request attempt {attempt}: {url}"
             )
@@ -61,58 +171,52 @@ class HTML2Print_HTTPClient(HttpClient):
             f"failed to get response for URL: {url} with error: {last_error}"
         )
 
+    @staticmethod
+    def get_chrome_version():
+        # Special case: GitHub Actions macOS CI machines have both
+        # Google Chrome for Testing and normal Google Chrome installed, and
+        # sometimes their versions are of different major version families.
+        # The solution is to check if the Google Chrome for Testing is available,
+        # and use its version instead of the normal one.
+        if platform.system() == "Darwin":
+            chrome_path = "/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+            try:
+                print(  # noqa: T201
+                    "html2print: "
+                    "checking if there is Google Chrome for Testing instead of "
+                    "a normal Chrome available."
+                )
 
-class HTML2Print_CacheManager(DriverCacheManager):
-    def __init__(self, file_manager: FileManager, path_to_cache_dir: str):
-        super().__init__(file_manager=file_manager)
-        self.path_to_cache_dir: str = path_to_cache_dir
+                version_output = subprocess.run(
+                    [chrome_path, "--version"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                chrome_version = version_output.stdout.strip()
+                match = re.search(r"\d+(\.\d+)+", chrome_version)
+                if not match:
+                    raise RuntimeError(
+                        "Cannot extract the version part using regex."
+                    )
 
-    def find_driver(self, driver: Driver):
-        path_to_cached_chrome_driver_dir = os.path.join(
-            self.path_to_cache_dir, "chromedriver"
-        )
+                chrome_version = match.group(0)
 
-        os_type = self.get_os_type()
-        browser_type = driver.get_browser_type()
-        browser_version = self._os_system_manager.get_browser_version_from_os(
-            browser_type
-        )
-        assert browser_version is not None, browser_version
+                print(  # noqa: T201
+                    f"html2print: Google Chrome for Testing Version: {chrome_version}"
+                )
 
-        path_to_cached_chrome_driver_dir = os.path.join(
-            path_to_cached_chrome_driver_dir, browser_version, os_type
-        )
-        path_to_cached_chrome_driver = os.path.join(
-            path_to_cached_chrome_driver_dir, "chromedriver"
-        )
-        if os.path.isfile(path_to_cached_chrome_driver):
-            print(  # noqa: T201
-                f"html2print: ChromeDriver exists in the local cache: "
-                f"{path_to_cached_chrome_driver}"
-            )
-            return path_to_cached_chrome_driver
-        print(  # noqa: T201
-            f"html2print: ChromeDriver does not exist in the local cache: "
-            f"{path_to_cached_chrome_driver}"
-        )
-        path_to_downloaded_chrome_driver = super().find_driver(driver)
-        if path_to_downloaded_chrome_driver is None:
-            print(  # noqa: T201
-                f"html2print: could not get a downloaded ChromeDriver: "
-                f"{path_to_cached_chrome_driver}"
-            )
-            return None
+                return chrome_version
+            except FileNotFoundError:
+                print("html2print: Chrome for Testing not available.")  # noqa: T201
+            except Exception as e:
+                print(  # noqa: T201
+                    f"html2print: Error getting Google Chrome for Testing version: {e}"
+                )
 
-        print(  # noqa: T201
-            f"html2print: saving chromedriver to StrictDoc's local cache: "
-            f"{path_to_downloaded_chrome_driver} -> {path_to_cached_chrome_driver}"
-        )
-        Path(path_to_cached_chrome_driver_dir).mkdir(
-            parents=True, exist_ok=True
-        )
-        copy(path_to_downloaded_chrome_driver, path_to_cached_chrome_driver)
-
-        return path_to_cached_chrome_driver
+        os_manager = OperationSystemManager(os_type=None)
+        version = os_manager.get_browser_version_from_os(ChromeType.GOOGLE)
+        return version
 
 
 def get_inches_from_millimeters(mm: float) -> float:
@@ -190,23 +294,12 @@ def get_pdf_from_html(driver, url) -> bytes:
     return data
 
 
-def get_chrome_driver(path_to_cache_dir: str) -> str:
-    cache_manager = HTML2Print_CacheManager(
-        file_manager=FileManager(os_system_manager=OperationSystemManager()),
-        path_to_cache_dir=path_to_cache_dir,
-    )
-
-    http_client = HTML2Print_HTTPClient()
-    download_manager = WDMDownloadManager(http_client)
-    path_to_chrome = ChromeDriverManager(
-        download_manager=download_manager, cache_manager=cache_manager
-    ).install()
-    return path_to_chrome
-
-
 def create_webdriver(chromedriver: Optional[str], path_to_cache_dir: str):
+    print("html2print: creating ChromeDriver service.", flush=True)  # noqa: T201
     if chromedriver is None:
-        path_to_chrome = get_chrome_driver(path_to_cache_dir)
+        path_to_chrome = ChromeDriverManager().get_chrome_driver(
+            path_to_cache_dir
+        )
     else:
         path_to_chrome = chromedriver
     print(f"html2print: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
@@ -254,6 +347,8 @@ def main():
     command_subparsers = parser.add_subparsers(title="command", dest="command")
     command_subparsers.required = True
 
+    print(f"html2print: version {__version__}")  # noqa: T201
+
     #
     # Get driver command.
     #
@@ -295,12 +390,12 @@ def main():
     path_to_cache_dir: str
     if args.command == "get_driver":
         path_to_cache_dir = (
-            args.cache_dir
-            if args.cache_dir is not None
-            else (DEFAULT_CACHE_DIR)
+            args.cache_dir if args.cache_dir is not None else DEFAULT_CACHE_DIR
         )
 
-        path_to_chrome = get_chrome_driver(path_to_cache_dir)
+        path_to_chrome = ChromeDriverManager().get_chrome_driver(
+            path_to_cache_dir
+        )
         print(f"html2print: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
         sys.exit(0)
 
@@ -308,9 +403,7 @@ def main():
         paths: List[str] = args.paths
 
         path_to_cache_dir = (
-            args.cache_dir
-            if args.cache_dir is not None
-            else (DEFAULT_CACHE_DIR)
+            args.cache_dir if args.cache_dir is not None else DEFAULT_CACHE_DIR
         )
         driver = create_webdriver(args.chromedriver, path_to_cache_dir)
 
