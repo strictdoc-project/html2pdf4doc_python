@@ -39,6 +39,14 @@ sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf8", closefd=False)
 class ChromeDriverManager:
     def get_chrome_driver(self, path_to_cache_dir: str):
         chrome_version = self.get_chrome_version()
+
+        # If Web Driver Manager cannot detect Chrome, it returns None.
+        if chrome_version is None:
+            raise RuntimeError(
+                "html2print: "
+                "Web Driver Manager could not detect an existing Chrome installation."
+            )
+
         chrome_major_version = chrome_version.split(".")[0]
 
         print(  # noqa: T201
