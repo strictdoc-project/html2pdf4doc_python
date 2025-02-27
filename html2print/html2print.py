@@ -302,7 +302,9 @@ def get_pdf_from_html(driver, url) -> bytes:
     return data
 
 
-def create_webdriver(chromedriver: Optional[str], path_to_cache_dir: str):
+def create_webdriver(
+    chromedriver: Optional[str], path_to_cache_dir: str, page_load_timeout: int
+) -> webdriver.Chrome:
     print("html2print: creating ChromeDriver service.", flush=True)  # noqa: T201
     if chromedriver is None:
         path_to_chrome = ChromeDriverManager().get_chrome_driver(
@@ -342,7 +344,7 @@ def create_webdriver(chromedriver: Optional[str], path_to_cache_dir: str):
         options=webdriver_options,
         service=service,
     )
-    driver.set_page_load_timeout(60)
+    driver.set_page_load_timeout(page_load_timeout)
 
     return driver
 
@@ -398,6 +400,19 @@ def main():
         help="Optional path to a cache directory whereto the ChromeDriver is downloaded.",
     )
     command_parser_print.add_argument(
+        "--page-load-timeout",
+        type=int,
+        default=2 * 60,
+        # 10 minutes should be enough to print even the largest documents.
+        choices=range(0, 10 * 60),
+        help=(
+            "How long shall HTML2Print wait while the Chrome Driver is printing "
+            "a given HTML page to PDF. "
+            "This is mainly driven by the time it takes for Chrome to open an "
+            "HTML file, load it, and let HTML2PDF.js finish its job."
+        ),
+    )
+    command_parser_print.add_argument(
         "paths", nargs="+", help="Paths to input HTML file."
     )
 
@@ -418,10 +433,14 @@ def main():
     elif args.command == "print":
         paths: List[str] = args.paths
 
+        page_load_timeout: int = args.page_load_timeout
+
         path_to_cache_dir = (
             args.cache_dir if args.cache_dir is not None else DEFAULT_CACHE_DIR
         )
-        driver = create_webdriver(args.chromedriver, path_to_cache_dir)
+        driver = create_webdriver(
+            args.chromedriver, path_to_cache_dir, page_load_timeout
+        )
 
         @atexit.register
         def exit_handler():
