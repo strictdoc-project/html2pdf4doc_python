@@ -312,6 +312,14 @@ def create_webdriver(chromedriver: Optional[str], path_to_cache_dir: str):
     webdriver_options.add_argument("--headless")
     webdriver_options.add_argument("--disable-extensions")
 
+    # The Chrome option --disable-dev-shm-usage disables the use of /dev/shm
+    # (shared memory) for temporary storage in Chrome.
+    # By default, Chrome uses /dev/shm for storing temporary files to improve
+    # performance. However, in environments with limited shared memory (such as
+    # Docker containers), this can lead to crashes or issues due to insufficient
+    # space.
+    webdriver_options.add_argument("--disable-dev-shm-usage")
+
     webdriver_options.add_experimental_option("useAutomationExtension", False)
     webdriver_options.add_experimental_option(
         "excludeSwitches", ["enable-automation"]
