@@ -1,0 +1,3 @@
+RUN: %expect_exit 1 %html2pdf print --page-load-timeout 0 %S/index1.html %S/Output/index1.pdf 2>&1 | filecheck %s
+
+CHECK: selenium.common.exceptions.TimeoutException: Message: timeout: Timed out receiving message from renderer: 0.000
