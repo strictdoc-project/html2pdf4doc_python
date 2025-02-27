@@ -20,7 +20,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.core.os_manager import ChromeType, OperationSystemManager
 
-__version__ = "0.0.12"
+__version__ = "0.0.13"
 
 PATH_TO_HTML2PDF_JS = os.path.join(
     os.path.dirname(os.path.join(__file__)), "html2pdf_js", "html2pdf.min.js"
