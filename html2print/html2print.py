@@ -20,7 +20,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.core.os_manager import ChromeType, OperationSystemManager
 
-__version__ = "0.0.13"
+__version__ = "0.0.14"
 
 PATH_TO_HTML2PDF_JS = os.path.join(
     os.path.dirname(os.path.join(__file__)), "html2pdf_js", "html2pdf.min.js"
@@ -319,8 +319,11 @@ def create_webdriver(
     webdriver_options = Options()
     webdriver_options.add_argument("start-maximized")
     webdriver_options.add_argument("disable-infobars")
-    webdriver_options.add_argument("--headless")
     webdriver_options.add_argument("--disable-extensions")
+    webdriver_options.add_argument("--headless")
+    # FIXME: This is not nice but otherwise it does not work in Ubuntu 24-based Docker image.
+    # https://github.com/SeleniumHQ/selenium/issues/15327#issuecomment-2689287561
+    webdriver_options.add_argument("--no-sandbox")
 
     # The Chrome option --disable-dev-shm-usage disables the use of /dev/shm
     # (shared memory) for temporary storage in Chrome.
