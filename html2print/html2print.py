@@ -20,13 +20,15 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.core.os_manager import ChromeType, OperationSystemManager
 
-__version__ = "0.0.14"
+__version__ = "0.0.15a2"
 
 PATH_TO_HTML2PDF_JS = os.path.join(
     os.path.dirname(os.path.join(__file__)), "html2pdf_js", "html2pdf.min.js"
 )
 
 DEFAULT_CACHE_DIR = os.path.join(Path.home(), ".html2print", "chromedriver")
+
+PATH_TO_CHROME_DRIVER_DEBUG_LOG = "/tmp/chromedriver.log"
 
 # HTML2PDF.js prints unicode symbols to console. The following makes it work on
 # Windows which otherwise complains:
@@ -303,7 +305,10 @@ def get_pdf_from_html(driver, url) -> bytes:
 
 
 def create_webdriver(
-    chromedriver: Optional[str], path_to_cache_dir: str, page_load_timeout: int
+    chromedriver: Optional[str],
+    path_to_cache_dir: str,
+    page_load_timeout: int,
+    debug: bool = False,
 ) -> webdriver.Chrome:
     print("html2print: creating ChromeDriver service.", flush=True)  # noqa: T201
     if chromedriver is None:
@@ -314,13 +319,20 @@ def create_webdriver(
         path_to_chrome = chromedriver
     print(f"html2print: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
 
-    service = Service(path_to_chrome)
+    if debug:
+        service = Service(
+            path_to_chrome, log_output=PATH_TO_CHROME_DRIVER_DEBUG_LOG
+        )
+    else:
+        service = Service(path_to_chrome)
 
     webdriver_options = Options()
     webdriver_options.add_argument("start-maximized")
     webdriver_options.add_argument("disable-infobars")
+    # Doesn't seem to be needed.
+    # webdriver_options.add_argument('--disable-gpu')  # noqa: ERA001
     webdriver_options.add_argument("--disable-extensions")
-    webdriver_options.add_argument("--headless")
+    webdriver_options.add_argument("--headless=chrome")
     # FIXME: This is not nice but otherwise it does not work in Ubuntu 24-based Docker image.
     # https://github.com/SeleniumHQ/selenium/issues/15327#issuecomment-2689287561
     webdriver_options.add_argument("--no-sandbox")
@@ -416,6 +428,14 @@ def main():
         ),
     )
     command_parser_print.add_argument(
+        "--debug",
+        action="store_true",
+        help=(
+            f"Enables ChromeDriver logging to a file: "
+            f"{PATH_TO_CHROME_DRIVER_DEBUG_LOG}."
+        ),
+    )
+    command_parser_print.add_argument(
         "paths", nargs="+", help="Paths to input HTML file."
     )
 
@@ -442,7 +462,10 @@ def main():
             args.cache_dir if args.cache_dir is not None else DEFAULT_CACHE_DIR
         )
         driver = create_webdriver(
-            args.chromedriver, path_to_cache_dir, page_load_timeout
+            args.chromedriver,
+            path_to_cache_dir,
+            page_load_timeout,
+            debug=args.debug,
         )
 
         @atexit.register
