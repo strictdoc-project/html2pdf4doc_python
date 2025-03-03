@@ -296,7 +296,6 @@ def run_docker(
     command_argument = (
         f'/bin/bash -c "{command}"' if command is not None else ""
     )
-    entry_point_argument = '--entrypoint=""' if command_argument else ""
 
     run_invoke(
         context,
@@ -305,8 +304,8 @@ def run_docker(
             --name html2print
             --rm
             -it
-            -v "$(pwd):/data"
-            {entry_point_argument}
+            -e HOST_UID=$(id -u) -e HOST_GID=$(id -g)
+            -v "$(pwd):/data:rw"
             {image}
             {command_argument}
         """,
@@ -326,6 +325,6 @@ def test_docker(context, image: str = "html2print:latest"):
         context,
         image=image,
         command=(
-            "cd tests/integration/01_hello_world && html2print print --debug index.html /data/output/index.pdf && cat /tmp/chromedriver.log"
+            "cd tests/integration/01_hello_world && html2print print index.html /data/output/index.pdf"
         ),
     )

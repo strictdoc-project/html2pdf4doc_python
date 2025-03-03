@@ -4,6 +4,7 @@ FROM ubuntu:24.04
 RUN apt-get update && apt-get install -y \
     curl \
     git \
+    gosu \
     python3 \
     python3-pip \
     python3-venv \
@@ -17,15 +18,6 @@ RUN wget -q -O google-chrome.deb https://dl.google.com/linux/direct/google-chrom
     && apt-get update \
     && apt-get install -y ./google-chrome.deb \
     && rm google-chrome.deb
-
-# Create a new non-root user and group.
-# NOTE: It is important that a non-root user is used because otherwise the
-# Chrome Driver fails with: "User data directory is already in use"
-# https://github.com/SeleniumHQ/selenium/issues/15327#issuecomment-2688613182
-RUN groupadd -r html2print && useradd -r -m -g html2print html2print
-
-# Grant the new user sudo privileges.
-RUN echo "html2print ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/html2print
 
 # Create a virtual environment in the user's home directory.
 RUN python3 -m venv /opt/venv
@@ -47,9 +39,14 @@ RUN if [ "$HTML2PRINT_SOURCE" = "pypi" ]; then \
     fi; \
     chmod -R 777 /opt/venv;
 
-USER html2print
+# Remove the default 'ubuntu' user.
+RUN userdel -r ubuntu 2>/dev/null || true
+
+# Allow updating the UID/GID dynamically at runtime
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Set the working directory to the user's home directory.
 WORKDIR /data
 
-ENTRYPOINT ["/bin/bash"]
+ENTRYPOINT ["/entrypoint.sh"]
