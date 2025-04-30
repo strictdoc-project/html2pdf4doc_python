@@ -1,4 +1,3 @@
-# mypy: disable-error-code="no-untyped-call,no-untyped-def"
 import argparse
 import atexit
 import base64
@@ -39,8 +38,8 @@ sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf8", closefd=False)
 
 
 class ChromeDriverManager:
-    def get_chrome_driver(self, path_to_cache_dir: str):
-        chrome_version = self.get_chrome_version()
+    def get_chrome_driver(self, path_to_cache_dir: str) -> str:
+        chrome_version: Optional[str] = self.get_chrome_version()
 
         # If Web Driver Manager cannot detect Chrome, it returns None.
         if chrome_version is None:
@@ -104,11 +103,11 @@ class ChromeDriverManager:
 
     @staticmethod
     def _download_chromedriver(
-        chrome_major_version,
+        chrome_major_version: str,
         os_type: str,
-        path_to_driver_cache_dir,
-        path_to_cached_chrome_driver,
-    ):
+        path_to_driver_cache_dir: str,
+        path_to_cached_chrome_driver: str,
+    ) -> str:
         url = "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json"
         response = ChromeDriverManager.send_http_get_request(url).json()
 
@@ -160,14 +159,14 @@ class ChromeDriverManager:
         return path_to_cached_chrome_driver
 
     @staticmethod
-    def send_http_get_request(url, params=None, **kwargs) -> Response:
+    def send_http_get_request(url: str) -> Response:
         last_error: Optional[Exception] = None
         for attempt in range(1, 4):
             print(  # noqa: T201
                 f"html2print: sending GET request attempt {attempt}: {url}"
             )
             try:
-                return requests.get(url, params, timeout=(5, 5), **kwargs)
+                return requests.get(url, timeout=(5, 5))
             except requests.exceptions.ConnectTimeout as connect_timeout_:
                 last_error = connect_timeout_
             except requests.exceptions.ReadTimeout as read_timeout_:
@@ -182,7 +181,7 @@ class ChromeDriverManager:
         )
 
     @staticmethod
-    def get_chrome_version():
+    def get_chrome_version() -> Optional[str]:
         # Special case: GitHub Actions macOS CI machines have both
         # Google Chrome for Testing and normal Google Chrome installed, and
         # sometimes their versions are of different major version families.
@@ -224,8 +223,8 @@ class ChromeDriverManager:
                     f"html2print: Error getting Google Chrome for Testing version: {e}"
                 )
 
-        os_manager = OperationSystemManager(os_type=None)
-        version = os_manager.get_browser_version_from_os(ChromeType.GOOGLE)
+        os_manager = OperationSystemManager(os_type=None)  # type: ignore[no-untyped-call]
+        version: str = os_manager.get_browser_version_from_os(ChromeType.GOOGLE)  # type: ignore[no-untyped-call]
         return version
 
 
@@ -233,7 +232,7 @@ def get_inches_from_millimeters(mm: float) -> float:
     return mm / 25.4
 
 
-def get_pdf_from_html(driver, url) -> bytes:
+def get_pdf_from_html(driver: webdriver.Chrome, url: str) -> bytes:
     print(f"html2print: opening URL with ChromeDriver: {url}")  # noqa: T201
 
     driver.get(url)
@@ -272,7 +271,7 @@ def get_pdf_from_html(driver, url) -> bytes:
     logs: List[Dict[str, str]] = []
     try:
         while True:
-            logs = driver.get_log("browser")
+            logs = driver.get_log("browser")  # type: ignore[no-untyped-call]
             for entry_ in logs:
                 if "HTML2PDF4DOC time" in entry_["message"]:
                     print("success: HTML2PDF completed its job.")  # noqa: T201
@@ -305,18 +304,20 @@ def get_pdf_from_html(driver, url) -> bytes:
 
 
 def create_webdriver(
-    chromedriver: Optional[str],
+    chromedriver_argument: Optional[str],
     path_to_cache_dir: str,
     page_load_timeout: int,
     debug: bool = False,
 ) -> webdriver.Chrome:
     print("html2print: creating ChromeDriver service.", flush=True)  # noqa: T201
-    if chromedriver is None:
+
+    path_to_chrome: str
+    if chromedriver_argument is None:
         path_to_chrome = ChromeDriverManager().get_chrome_driver(
             path_to_cache_dir
         )
     else:
-        path_to_chrome = chromedriver
+        path_to_chrome = chromedriver_argument
     print(f"html2print: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
 
     if debug:
@@ -364,7 +365,7 @@ def create_webdriver(
     return driver
 
 
-def main():
+def main() -> None:
     if not os.path.isfile(PATH_TO_HTML2PDF_JS):
         raise RuntimeError(
             f"Corrupted html2print package bundle. "
@@ -461,7 +462,7 @@ def main():
         path_to_cache_dir = (
             args.cache_dir if args.cache_dir is not None else DEFAULT_CACHE_DIR
         )
-        driver = create_webdriver(
+        driver: webdriver.Chrome = create_webdriver(
             args.chromedriver,
             path_to_cache_dir,
             page_load_timeout,
@@ -469,7 +470,7 @@ def main():
         )
 
         @atexit.register
-        def exit_handler():
+        def exit_handler() -> None:
             print("html2print: exit handler: quitting the ChromeDriver.")  # noqa: T201
             driver.quit()
 
