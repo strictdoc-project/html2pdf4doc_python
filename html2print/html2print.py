@@ -109,7 +109,18 @@ class ChromeDriverManager:
         path_to_cached_chrome_driver: str,
     ) -> str:
         url = "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json"
-        response = ChromeDriverManager.send_http_get_request(url).json()
+        response = ChromeDriverManager.send_http_get_request(url)
+        if response is None:
+            raise RuntimeError(
+                "Could not download known-good-versions-with-downloads.json"
+            )
+
+        response = response.json()
+        if response is None:
+            raise RuntimeError(
+                "Could not parse known-good-versions-with-downloads.json"
+            )
+        assert isinstance(response, dict)
 
         matching_versions = [
             item
@@ -118,7 +129,7 @@ class ChromeDriverManager:
         ]
 
         if not matching_versions:
-            raise Exception(
+            raise RuntimeError(
                 f"No compatible ChromeDriver found for Chrome version {chrome_major_version}"
             )
 
@@ -141,6 +152,11 @@ class ChromeDriverManager:
             f"html2print: downloading ChromeDriver from: {driver_url}"
         )
         response = ChromeDriverManager.send_http_get_request(driver_url)
+
+        if response is None:
+            raise RuntimeError(
+                f"Could not download ChromeDriver from {driver_url}"
+            )
 
         Path(path_to_driver_cache_dir).mkdir(parents=True, exist_ok=True)
         zip_path = os.path.join(path_to_driver_cache_dir, "chromedriver.zip")
@@ -179,6 +195,9 @@ class ChromeDriverManager:
             f"html2print: "
             f"failed to get response for URL: {url} with error: {last_error}"
         )
+        raise RuntimeError(
+            f"GET request failed after 3 attempts: {url}"
+        ) from last_error
 
     @staticmethod
     def get_chrome_version() -> Optional[str]:

@@ -1,0 +1,4 @@
+# Mark the file as binary, so that Git won't not convert the line endings.
+# Otherwise, the file becomes unreadable for bash inside Docker (on Windows platforms).
+entrypoint.sh -text
+

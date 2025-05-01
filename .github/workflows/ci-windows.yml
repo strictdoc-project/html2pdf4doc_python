@@ -28,18 +28,7 @@ jobs:
       shell: powershell
 
     - name: Check Chrome Version
-      run: '& "C:\Program Files\Google\Chrome\Application\chrome.exe" --version'
-      shell: powershell
-
-    - name: Add Chrome to PATH
-      run: |
-        $chromePath = "C:\Program Files\Google\Chrome\Application"
-        echo "Adding $chromePath to PATH"
-        echo "$chromePath" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
-      shell: powershell
-
-    - name: Verify Chrome Installation
-      run: chrome --version
+      run: '(Get-Item "C:\Program Files\Google\Chrome\Application\chrome.exe").VersionInfo'
       shell: powershell
 
     - name: Upgrade pip
