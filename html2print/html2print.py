@@ -311,21 +311,23 @@ def create_webdriver(
 ) -> webdriver.Chrome:
     print("html2print: creating ChromeDriver service.", flush=True)  # noqa: T201
 
-    path_to_chrome: str
+    path_to_chrome_driver: str
     if chromedriver_argument is None:
-        path_to_chrome = ChromeDriverManager().get_chrome_driver(
+        path_to_chrome_driver = ChromeDriverManager().get_chrome_driver(
             path_to_cache_dir
         )
     else:
-        path_to_chrome = chromedriver_argument
-    print(f"html2print: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
+        path_to_chrome_driver = chromedriver_argument
+    print(  # noqa: T201
+        f"html2print: ChromeDriver available at path: {path_to_chrome_driver}"
+    )
 
     if debug:
         service = Service(
-            path_to_chrome, log_output=PATH_TO_CHROME_DRIVER_DEBUG_LOG
+            path_to_chrome_driver, log_output=PATH_TO_CHROME_DRIVER_DEBUG_LOG
         )
     else:
-        service = Service(path_to_chrome)
+        service = Service(path_to_chrome_driver)
 
     webdriver_options = Options()
     webdriver_options.add_argument("start-maximized")
@@ -333,8 +335,16 @@ def create_webdriver(
     # Doesn't seem to be needed.
     # webdriver_options.add_argument('--disable-gpu')  # noqa: ERA001
     webdriver_options.add_argument("--disable-extensions")
-    webdriver_options.add_argument("--headless=chrome")
-    # FIXME: This is not nice but otherwise it does not work in Ubuntu 24-based Docker image.
+
+    # Use --headless=new, as it seems to be more stable on Windows (available since Chrome 109).
+    # see https://www.selenium.dev/blog/2023/headless-is-going-away/
+    webdriver_options.add_argument("--headless=new")
+
+    # Docker disables some syscalls that are required for Chrome's sandbox to work.
+    # https://stackoverflow.com/questions/68855734/how-to-setup-chrome-sandbox-on-docker-container
+    # We prefer isolation of the container over isolation of tabs within Chrome,
+    # and thus disable the sandbox.
+    # See also:
     # https://github.com/SeleniumHQ/selenium/issues/15327#issuecomment-2689287561
     webdriver_options.add_argument("--no-sandbox")
 
