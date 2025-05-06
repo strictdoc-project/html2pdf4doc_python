@@ -19,7 +19,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.core.os_manager import ChromeType, OperationSystemManager
 
-__version__ = "0.0.16"
+__version__ = "0.0.17"
 
 PATH_TO_HTML2PDF_JS = os.path.join(
     os.path.dirname(os.path.join(__file__)), "html2pdf_js", "html2pdf.min.js"
@@ -292,7 +292,7 @@ def get_pdf_from_html(driver: webdriver.Chrome, url: str) -> bytes:
         while True:
             logs = driver.get_log("browser")  # type: ignore[no-untyped-call]
             for entry_ in logs:
-                if "HTML2PDF4DOC time" in entry_["message"]:
+                if "[HTML2PDF4DOC] Total time:" in entry_["message"]:
                     print("success: HTML2PDF completed its job.")  # noqa: T201
                     raise Done
             if (datetime.today() - datetime_start).total_seconds() > 60:
