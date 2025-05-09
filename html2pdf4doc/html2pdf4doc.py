@@ -21,15 +21,17 @@ from webdriver_manager.core.os_manager import ChromeType, OperationSystemManager
 
 __version__ = "0.0.17"
 
-PATH_TO_HTML2PDF_JS = os.path.join(
-    os.path.dirname(os.path.join(__file__)), "html2pdf_js", "html2pdf.min.js"
+PATH_TO_HTML2PDF4DOC_JS = os.path.join(
+    os.path.dirname(os.path.join(__file__)),
+    "html2pdf4doc_js",
+    "html2pdf4doc.min.js",
 )
 
-DEFAULT_CACHE_DIR = os.path.join(Path.home(), ".html2print", "chromedriver")
+DEFAULT_CACHE_DIR = os.path.join(Path.home(), ".html2pdf4doc", "chromedriver")
 
 PATH_TO_CHROME_DRIVER_DEBUG_LOG = "/tmp/chromedriver.log"
 
-# HTML2PDF.js prints unicode symbols to console. The following makes it work on
+# HTML2PDF4Doc.js prints unicode symbols to console. The following makes it work on
 # Windows which otherwise complains:
 # UnicodeEncodeError: 'charmap' codec can't encode characters in position 129-130: character maps to <undefined>
 # How to make python 3 print() utf8
@@ -44,14 +46,14 @@ class ChromeDriverManager:
         # If Web Driver Manager cannot detect Chrome, it returns None.
         if chrome_version is None:
             raise RuntimeError(
-                "html2print: "
+                "html2pdf4doc: "
                 "Web Driver Manager could not detect an existing Chrome installation."
             )
 
         chrome_major_version = chrome_version.split(".")[0]
 
         print(  # noqa: T201
-            f"html2print: Installed Chrome version: {chrome_version}"
+            f"html2pdf4doc: Installed Chrome version: {chrome_version}"
         )
 
         system_map = {
@@ -65,7 +67,7 @@ class ChromeDriverManager:
         is_windows = platform.system() == "Windows"
 
         print(  # noqa: T201
-            f"html2print: OS system: {platform.system()}, OS type: {os_type}."
+            f"html2pdf4doc: OS system: {platform.system()}, OS type: {os_type}."
         )
 
         path_to_cached_chrome_driver_dir = os.path.join(
@@ -81,12 +83,12 @@ class ChromeDriverManager:
 
         if os.path.isfile(path_to_cached_chrome_driver):
             print(  # noqa: T201
-                f"html2print: ChromeDriver exists in the local cache: "
+                f"html2pdf4doc: ChromeDriver exists in the local cache: "
                 f"{path_to_cached_chrome_driver}"
             )
             return path_to_cached_chrome_driver
         print(  # noqa: T201
-            f"html2print: ChromeDriver does not exist in the local cache: "
+            f"html2pdf4doc: ChromeDriver does not exist in the local cache: "
             f"{path_to_cached_chrome_driver}"
         )
 
@@ -149,7 +151,7 @@ class ChromeDriverManager:
             )
 
         print(  # noqa: T201
-            f"html2print: downloading ChromeDriver from: {driver_url}"
+            f"html2pdf4doc: downloading ChromeDriver from: {driver_url}"
         )
         response = ChromeDriverManager.send_http_get_request(driver_url)
 
@@ -161,7 +163,7 @@ class ChromeDriverManager:
         Path(path_to_driver_cache_dir).mkdir(parents=True, exist_ok=True)
         zip_path = os.path.join(path_to_driver_cache_dir, "chromedriver.zip")
         print(  # noqa: T201
-            f"html2print: saving downloaded ChromeDriver to path: {zip_path}"
+            f"html2pdf4doc: saving downloaded ChromeDriver to path: {zip_path}"
         )
         with open(zip_path, "wb") as file:
             file.write(response.content)
@@ -170,7 +172,7 @@ class ChromeDriverManager:
             zip_ref.extractall(path_to_driver_cache_dir)
 
         print(  # noqa: T201
-            f"html2print: ChromeDriver downloaded to: {path_to_cached_chrome_driver}"
+            f"html2pdf4doc: ChromeDriver downloaded to: {path_to_cached_chrome_driver}"
         )
         return path_to_cached_chrome_driver
 
@@ -179,7 +181,7 @@ class ChromeDriverManager:
         last_error: Optional[Exception] = None
         for attempt in range(1, 4):
             print(  # noqa: T201
-                f"html2print: sending GET request attempt {attempt}: {url}"
+                f"html2pdf4doc: sending GET request attempt {attempt}: {url}"
             )
             try:
                 return requests.get(url, timeout=(5, 5))
@@ -189,10 +191,10 @@ class ChromeDriverManager:
                 last_error = read_timeout_
             except Exception as exception_:
                 raise AssertionError(
-                    "html2print: unknown exception", exception_
+                    "html2pdf4doc: unknown exception", exception_
                 ) from None
         print(  # noqa: T201
-            f"html2print: "
+            f"html2pdf4doc: "
             f"failed to get response for URL: {url} with error: {last_error}"
         )
         raise RuntimeError(
@@ -210,7 +212,7 @@ class ChromeDriverManager:
             chrome_path = "/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
             try:
                 print(  # noqa: T201
-                    "html2print: "
+                    "html2pdf4doc: "
                     "checking if there is Google Chrome for Testing instead of "
                     "a normal Chrome available."
                 )
@@ -231,15 +233,15 @@ class ChromeDriverManager:
                 chrome_version = match.group(0)
 
                 print(  # noqa: T201
-                    f"html2print: Google Chrome for Testing Version: {chrome_version}"
+                    f"html2pdf4doc: Google Chrome for Testing Version: {chrome_version}"
                 )
 
                 return chrome_version
             except FileNotFoundError:
-                print("html2print: Chrome for Testing not available.")  # noqa: T201
+                print("html2pdf4doc: Chrome for Testing not available.")  # noqa: T201
             except Exception as e:
                 print(  # noqa: T201
-                    f"html2print: Error getting Google Chrome for Testing version: {e}"
+                    f"html2pdf4doc: Error getting Google Chrome for Testing version: {e}"
                 )
 
         os_manager = OperationSystemManager(os_type=None)  # type: ignore[no-untyped-call]
@@ -252,7 +254,7 @@ def get_inches_from_millimeters(mm: float) -> float:
 
 
 def get_pdf_from_html(driver: webdriver.Chrome, url: str) -> bytes:
-    print(f"html2print: opening URL with ChromeDriver: {url}")  # noqa: T201
+    print(f"html2pdf4doc: opening URL with ChromeDriver: {url}")  # noqa: T201
 
     driver.get(url)
 
@@ -293,7 +295,7 @@ def get_pdf_from_html(driver: webdriver.Chrome, url: str) -> bytes:
             logs = driver.get_log("browser")  # type: ignore[no-untyped-call]
             for entry_ in logs:
                 if "[HTML2PDF4DOC] Total time:" in entry_["message"]:
-                    print("success: HTML2PDF completed its job.")  # noqa: T201
+                    print("success: HTML2PDF4Doc completed its job.")  # noqa: T201
                     raise Done
             if (datetime.today() - datetime_start).total_seconds() > 60:
                 raise TimeoutError
@@ -302,11 +304,12 @@ def get_pdf_from_html(driver: webdriver.Chrome, url: str) -> bytes:
         pass
     except TimeoutError:
         print(  # noqa: T201
-            "error: could not receive a successful completion status from HTML2PDF."
+            "error: html2pdf4doc: "
+            "could not receive a successful completion status from HTML2PDF4Doc."
         )
         sys.exit(1)
 
-    print("html2print: JS logs from the print session:")  # noqa: T201
+    print("html2pdf4doc: JS logs from the print session:")  # noqa: T201
     print('"""')  # noqa: T201
     for entry in logs:
         print(entry)  # noqa: T201
@@ -315,7 +318,7 @@ def get_pdf_from_html(driver: webdriver.Chrome, url: str) -> bytes:
     #
     # Execute Print command with ChromeDriver.
     #
-    print("html2print: executing print command with ChromeDriver.")  # noqa: T201
+    print("html2pdf4doc: executing print command with ChromeDriver.")  # noqa: T201
     result = driver.execute_cdp_cmd("Page.printToPDF", calculated_print_options)
 
     data = base64.b64decode(result["data"])
@@ -328,7 +331,7 @@ def create_webdriver(
     page_load_timeout: int,
     debug: bool = False,
 ) -> webdriver.Chrome:
-    print("html2print: creating ChromeDriver service.", flush=True)  # noqa: T201
+    print("html2pdf4doc: creating ChromeDriver service.", flush=True)  # noqa: T201
 
     path_to_chrome_driver: str
     if chromedriver_argument is None:
@@ -338,7 +341,7 @@ def create_webdriver(
     else:
         path_to_chrome_driver = chromedriver_argument
     print(  # noqa: T201
-        f"html2print: ChromeDriver available at path: {path_to_chrome_driver}"
+        f"html2pdf4doc: ChromeDriver available at path: {path_to_chrome_driver}"
     )
 
     if debug:
@@ -383,7 +386,7 @@ def create_webdriver(
     # Enable the capturing of everything in JS console.
     webdriver_options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
 
-    print("html2print: creating ChromeDriver.", flush=True)  # noqa: T201
+    print("html2pdf4doc: creating ChromeDriver.", flush=True)  # noqa: T201
 
     driver = webdriver.Chrome(
         options=webdriver_options,
@@ -395,13 +398,14 @@ def create_webdriver(
 
 
 def main() -> None:
-    if not os.path.isfile(PATH_TO_HTML2PDF_JS):
+    if not os.path.isfile(PATH_TO_HTML2PDF4DOC_JS):
         raise RuntimeError(
-            f"Corrupted html2print package bundle. "
-            f"The HTML2PDF.js file is missing at path: {PATH_TO_HTML2PDF_JS}."
+            f"Corrupted html2pdf4doc package bundle. "
+            f"The html2pdf4doc JS file is missing at path: "
+            f"{PATH_TO_HTML2PDF4DOC_JS}."
         )
 
-    parser = argparse.ArgumentParser(description="HTML2Print printer script.")
+    parser = argparse.ArgumentParser(description="html2pdf4doc printer script.")
 
     parser.add_argument(
         "-v", "--version", action="version", version=__version__
@@ -410,7 +414,7 @@ def main() -> None:
     command_subparsers = parser.add_subparsers(title="command", dest="command")
     command_subparsers.required = True
 
-    print(f"html2print: version {__version__}")  # noqa: T201
+    print(f"html2pdf4doc: version {__version__}")  # noqa: T201
 
     #
     # Get driver command.
@@ -451,10 +455,10 @@ def main() -> None:
         # 10 minutes should be enough to print even the largest documents.
         choices=range(0, 10 * 60),
         help=(
-            "How long shall HTML2Print wait while the Chrome Driver is printing "
-            "a given HTML page to PDF. "
+            "How long shall html2pdf4doc Python driver wait while the "
+            "Chrome Driver is printing a given HTML page to PDF. "
             "This is mainly driven by the time it takes for Chrome to open an "
-            "HTML file, load it, and let HTML2PDF.js finish its job."
+            "HTML file, load it, and let HTML2PDF4Doc.js finish its job."
         ),
     )
     command_parser_print.add_argument(
@@ -480,7 +484,7 @@ def main() -> None:
         path_to_chrome = ChromeDriverManager().get_chrome_driver(
             path_to_cache_dir
         )
-        print(f"html2print: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
+        print(f"html2pdf4doc: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
         sys.exit(0)
 
     elif args.command == "print":
@@ -500,7 +504,7 @@ def main() -> None:
 
         @atexit.register
         def exit_handler() -> None:
-            print("html2print: exit handler: quitting the ChromeDriver.")  # noqa: T201
+            print("html2pdf4doc: exit handler: quitting the ChromeDriver.")  # noqa: T201
             driver.quit()
 
         assert len(paths) % 2 == 0, (
@@ -521,7 +525,7 @@ def main() -> None:
             with open(path_to_output_pdf, "wb") as f:
                 f.write(pdf_bytes)
     else:
-        print("html2print: unknown command.")  # noqa: T201
+        print("html2pdf4doc: unknown command.")  # noqa: T201
         sys.exit(1)
 
 

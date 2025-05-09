@@ -2,10 +2,10 @@ RUN: %html2pdf print --cache-dir %S/Output/cache %S/index.html %S/Output/index.p
 RUN: %check_exists --file "%S/Output/index.pdf"
 RUN: python %S/test.py
 
-CHECK-RUN1: html2print: ChromeDriver does not exist in the local cache:
+CHECK-RUN1: html2pdf4doc: ChromeDriver does not exist in the local cache:
 
 RUN: %html2pdf print --cache-dir %S/Output/cache %S/index.html %S/Output/index.pdf | filecheck %s --dump-input=fail --check-prefix CHECK-RUN2
 RUN: %check_exists --file "%S/Output/index.pdf"
 RUN: python %S/test.py
 
-CHECK-RUN2: html2print: ChromeDriver exists in the local cache:
+CHECK-RUN2: html2pdf4doc: ChromeDriver exists in the local cache:

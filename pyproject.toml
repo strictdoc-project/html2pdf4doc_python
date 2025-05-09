@@ -3,17 +3,18 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "html2print/html2print.py"
+path = "html2pdf4doc/html2pdf4doc.py"
 
 [tool.hatch.build]
-# We want HTML2PDF.js to be gitignored, but we want it to make into the dist/
+# Currently unused:
+# We want html2pdf4doc.min.js to be gitignored, but we want it to make into the dist/
 # folder, into both tar.gz and .whl when the Pip package is built.
 # This option prevents Hatch from using .gitignore to exclude files.
-ignore-vcs = true
+# ignore-vcs = true
 
 include = [
-    "html2print/html2print.py",
-    "html2print/html2pdf_js/html2pdf.min.js",
+    "html2pdf4doc/html2pdf4doc.py",
+    "html2pdf4doc/html2pdf4doc_js/html2pdf4doc.min.js",
 ]
 
 exclude = [
@@ -22,9 +23,9 @@ exclude = [
 ]
 
 [project]
-name = "html2print"
+name = "html2pdf4doc"
 dynamic = ["version"]
-description = "Python client for HTML2PDF JavaScript library."
+description = "Python client for HTML2PDF4Doc JavaScript library."
 readme = "README.md"
 # https://github.com/pypa/twine/issues/1216 license-files is broken as of 2025-02-03
 # Using [] as a suggested workaround.
@@ -36,7 +37,7 @@ authors = [
     { name = "Maryna Balioura", email = "mettta@gmail.com" },
 ]
 classifiers = [
-    # "License :: OSI Approved :: BSD License",
+    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
@@ -48,11 +49,12 @@ classifiers = [
 ]
 
 dependencies = [
-    # HTML2PDF dependencies
     "selenium",
+
+    # Currently only used for detecting a local Chrome installation.
     "webdriver-manager",
 
-    # requests is used by HTML2PDF_HTTPClient.
+    # requests is used for downloading the Chrome driver.
     "requests",
 ]
 
@@ -64,7 +66,7 @@ development = [
 ]
 
 [project.scripts]
-html2print = "html2print.html2print:main"
+html2pdf4doc = "html2pdf4doc.html2pdf4doc:main"
 
 [project.urls]
 Changelog = "https://github.com/mettta/html2pdf_python/releases/"

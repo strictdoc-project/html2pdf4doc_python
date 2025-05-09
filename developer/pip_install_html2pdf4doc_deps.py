@@ -29,7 +29,7 @@ def check_if_package_installed(package_name: str):
 
 
 print(  # noqa: T201
-    "pip_install_html2print_deps.py: "
+    "pip_install_html2pdf4doc_deps.py: "
     "checking if the current Python environment has all packages installed"
     ".",
     flush=True,
@@ -48,7 +48,7 @@ for dependency in dependencies:
         check_if_package_installed(dependency)
     except PackageNotFound:
         print(  # noqa: T201
-            f"pip_install_html2print_deps.py: "
+            f"pip_install_html2pdf4doc_deps.py: "
             f"Package is not installed: '{dependency}'.",
             flush=True,
         )
@@ -57,8 +57,8 @@ for dependency in dependencies:
     except PackageVersionConflict as exception_:
         print(  # noqa: T201
             (
-                f"pip_install_html2print_deps.py: version conflict between "
-                f"html2print's requirement '{dependency}' "
+                f"pip_install_html2pdf4doc_deps.py: version conflict between "
+                f"html2pdf4doc's requirement '{dependency}' "
                 f"and the already installed package: "
                 f"{exception_.args[0]}."
             ),
@@ -69,13 +69,13 @@ for dependency in dependencies:
 
 if not needs_installation:
     print(  # noqa: T201
-        "pip_install_html2print_deps.py: all packages seem to be installed.",
+        "pip_install_html2pdf4doc_deps.py: all packages seem to be installed.",
         flush=True,
     )
     sys.exit(0)
 
 print(  # noqa: T201
-    "pip_install_html2print_deps.py: will install packages.", flush=True
+    "pip_install_html2pdf4doc_deps.py: will install packages.", flush=True
 )
 
 all_packages = "\n".join(dependencies) + "\n"

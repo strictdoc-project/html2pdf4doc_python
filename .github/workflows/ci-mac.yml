@@ -1,4 +1,4 @@
-name: "HTML2PDF on macOS"
+name: "HTML2PDF4Doc on macOS"
 
 on:
   pull_request:
@@ -30,19 +30,19 @@ jobs:
       run: |
         pip install -r requirements.development.txt
 
-    - name: Clone HTML2PDF.js
+    - name: Clone HTML2PDF4Doc.js
       run: |
         invoke bootstrap
 
     - name: Install HPDF dependencies.
       run: |
-        python developer/pip_install_html2print_deps.py
+        python developer/pip_install_html2pdf4doc_deps.py
 
     - name: Run Lint tasks
       run: |
         invoke lint
 
-    - name: Build HTML2PDF.js
+    - name: Build HTML2PDF4Doc.js
       run: |
         invoke build
 
