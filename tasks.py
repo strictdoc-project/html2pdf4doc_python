@@ -65,17 +65,17 @@ def build(context):
         context, "cd submodules/html2pdf && npm install && npm run build"
     )
     # Windows can't do slashes for this one.
-    if not os.path.isdir(os.path.join("html2print", "html2pdf_js")):
+    if not os.path.isdir(os.path.join("html2pdf4doc", "html2pdf4doc_js")):
         run_invoke(
             context,
             """
-            cd html2print && mkdir html2pdf_js
+            cd html2pdf4doc && mkdir html2pdf4doc_js
             """,
         )
     run_invoke(
         context,
         """
-        cp submodules/html2pdf/dist/bundle.js html2print/html2pdf_js/html2pdf.min.js
+        cp submodules/html2pdf/dist/bundle.js html2pdf4doc/html2pdf4doc_js/html2pdf4doc.min.js
         """,
     )
 
@@ -99,7 +99,7 @@ def get_chrome_driver(
     run_invoke(
         context,
         """
-        python html2print/html2print.py get_driver
+        python html2pdf4doc/html2pdf4doc.py get_driver
     """,
     )
 
@@ -112,7 +112,7 @@ def lint_ruff_format(context):
             ruff
                 format
                 *.py
-                html2print/
+                html2pdf4doc/
                 tests/integration/
         """,
     )
@@ -128,7 +128,7 @@ def lint_ruff(context):
     run_invoke(
         context,
         """
-            ruff check *.py html2print/ --fix --cache-dir build/ruff
+            ruff check *.py html2pdf4doc/ --fix --cache-dir build/ruff
         """,
     )
 
@@ -141,7 +141,7 @@ def lint_mypy(context):
     run_invoke(
         context,
         """
-            mypy html2print/
+            mypy html2pdf4doc/
                 --show-error-codes
                 --disable-error-code=import
                 --disable-error-code=misc
@@ -171,7 +171,7 @@ def test_integration(
 
     cwd = os.getcwd()
 
-    html2pdf_exec = f'python3 \\"{cwd}/html2print/html2print.py\\"'
+    html2pdf_exec = f'python3 \\"{cwd}/html2pdf4doc/html2pdf4doc.py\\"'
 
     focus_or_none = f"--filter {focus}" if focus else ""
     debug_opts = "-vv --show-all" if debug else ""
@@ -182,7 +182,7 @@ def test_integration(
     itest_command = f"""
         lit
         --threads 1
-        --param HTML2PRINT_EXEC="{html2pdf_exec}"
+        --param HTML2PDF4DOC_EXEC="{html2pdf_exec}"
         -v
         {debug_opts}
         {focus_or_none}
@@ -236,8 +236,8 @@ def package(context):
 def release(context, test_pypi=False, username=None, password=None):
     """
     A release can be made to PyPI or test package index (TestPyPI):
-    https://pypi.org/project/html2print/
-    https://test.pypi.org/project/html2print/
+    https://pypi.org/project/html2pdf4doc/
+    https://test.pypi.org/project/html2pdf4doc/
     """
 
     # When a username is provided, we also need password, and then we don't use
@@ -250,9 +250,9 @@ def release(context, test_pypi=False, username=None, password=None):
         ""
         if username
         else (
-            "--repository html2print_test"
+            "--repository html2pdf4doc_test"
             if test_pypi
-            else "--repository html2print_release"
+            else "--repository html2pdf4doc_release"
         )
     )
     user_password = f"-u{username} -p{password}" if username is not None else ""
@@ -263,7 +263,7 @@ def release(context, test_pypi=False, username=None, password=None):
     run_invoke(
         context,
         f"""
-            twine upload dist/html2print-*.tar.gz
+            twine upload dist/html2pdf4doc-*.tar.gz
                 {repository_argument_or_none}
                 {user_password}
         """,
@@ -273,7 +273,7 @@ def release(context, test_pypi=False, username=None, password=None):
 @task(aliases=["bd"])
 def build_docker(
     context,
-    image: str = "html2print:latest",
+    image: str = "html2pdf4doc:latest",
     no_cache: bool = False,
     source="pypi",
 ):
@@ -282,7 +282,7 @@ def build_docker(
         context,
         f"""
         docker build .
-            --build-arg HTML2PRINT_SOURCE={source}
+            --build-arg HTML2PDF4DOC_SOURCE={source}
             -t {image}
             {no_cache_argument}
         """,
@@ -291,7 +291,7 @@ def build_docker(
 
 @task(aliases=["rd"])
 def run_docker(
-    context, image: str = "html2print:latest", command: Optional[str] = None
+    context, image: str = "html2pdf4doc:latest", command: Optional[str] = None
 ):
     command_argument = (
         f'/bin/bash -c "{command}"' if command is not None else ""
@@ -301,7 +301,7 @@ def run_docker(
         context,
         f"""
         docker run
-            --name html2print
+            --name html2pdf4doc
             --rm
             -it
             -e HOST_UID=$(id -u) -e HOST_GID=$(id -g)
@@ -314,7 +314,7 @@ def run_docker(
 
 
 @task(aliases=["td"])
-def test_docker(context, image: str = "html2print:latest"):
+def test_docker(context, image: str = "html2pdf4doc:latest"):
     run_invoke(
         context,
         """
@@ -325,6 +325,6 @@ def test_docker(context, image: str = "html2print:latest"):
         context,
         image=image,
         command=(
-            "cd tests/integration/01_hello_world && html2print print index.html /data/output/index.pdf"
+            "cd tests/integration/01_hello_world && html2pdf4doc print index.html /data/output/index.pdf"
         ),
     )

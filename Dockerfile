@@ -27,15 +27,15 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # Install StrictDoc. Set default StrictDoc installation from PyPI but allow
 # overriding it with an environment variable.
-ARG HTML2PRINT_SOURCE="pypi"
-ENV HTML2PRINT_SOURCE=${HTML2PRINT_SOURCE}
+ARG HTML2PDF4DOC_SOURCE="pypi"
+ENV HTML2PDF4DOC_SOURCE=${HTML2PDF4DOC_SOURCE}
 
-RUN if [ "$HTML2PRINT_SOURCE" = "pypi" ]; then \
+RUN if [ "$HTML2PDF4DOC_SOURCE" = "pypi" ]; then \
       pip install --no-cache-dir --upgrade pip && \
-      pip install --no-cache-dir html2print; \
+      pip install --no-cache-dir html2pdf4doc; \
     else \
       pip install --no-cache-dir --upgrade pip && \
-      pip install --no-cache-dir git+https://github.com/mettta/html2pdf_python.git@${HTML2PRINT_SOURCE}; \
+      pip install --no-cache-dir git+https://github.com/mettta/html2pdf_python.git@${HTML2PDF4DOC_SOURCE}; \
     fi; \
     chmod -R 777 /opt/venv;
 
