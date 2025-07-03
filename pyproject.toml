@@ -42,6 +42,8 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
@@ -68,7 +70,6 @@ html2pdf4doc = "html2pdf4doc.html2pdf4doc:main"
 
 [project.urls]
 Changelog = "https://github.com/mettta/html2pdf_python/releases/"
-# Funding = "https://..."
 Homepage = "https://github.com/mettta/html2pdf_python/"
 Source = "https://github.com/mettta/html2pdf_python/"
 
