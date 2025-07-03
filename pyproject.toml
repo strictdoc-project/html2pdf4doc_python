@@ -27,8 +27,8 @@ name = "html2pdf4doc"
 dynamic = ["version"]
 description = "Python client for HTML2PDF4Doc JavaScript library."
 readme = "README.md"
-license = { text = "Custom: Apache-2.0 (only when used with StrictDoc); all other uses require a separate license." }
-license-files = [ "LICENSE", "LICENSE-APACHE" ]
+license = { text = "Apache-2.0" }
+license-files = [ "LICENSE" ]
 requires-python = ">=3.8"
 authors = [
     { name = "Stanislav Pankevich", email = "s.pankevich@gmail.com" },
