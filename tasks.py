@@ -263,7 +263,7 @@ def release(context, test_pypi=False, username=None, password=None):
     run_invoke(
         context,
         f"""
-            twine upload dist/html2pdf4doc-*.tar.gz
+            twine upload dist/html2pdf4doc-*.tar.gz dist/html2pdf4doc-*.whl
                 {repository_argument_or_none}
                 {user_password}
         """,
