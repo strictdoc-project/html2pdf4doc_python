@@ -1,6 +1,7 @@
 import argparse
 import atexit
 import base64
+import contextlib
 import os.path
 import platform
 import re
@@ -9,10 +10,11 @@ import sys
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from time import sleep
-from typing import Dict, List, Optional
+from time import sleep, time
+from typing import Dict, Iterator, List, Optional, Tuple
 
 import requests
+from pypdf import PdfReader
 from requests import Response
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -37,6 +39,28 @@ PATH_TO_CHROME_DRIVER_DEBUG_LOG = "/tmp/chromedriver.log"
 # How to make python 3 print() utf8
 # https://stackoverflow.com/questions/3597480/how-to-make-python-3-print-utf8
 sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf8", closefd=False)
+
+
+@contextlib.contextmanager
+def measure_performance(title: str) -> Iterator[None]:
+    time_start = time()
+    yield
+    time_end = time()
+
+    time_diff = time_end - time_start
+    padded_name = f"{title} ".ljust(60, ".")
+    padded_time = f" {time_diff:0.2f}".rjust(6, ".")
+    print(f"{padded_name}{padded_time}s", flush=True)  # noqa: T201
+
+
+def extract_page_count(logs: List[Dict[str, str]]) -> int:
+    pattern = re.compile(r'"\[HTML2PDF4DOC]\s*Page count:"\s*(\d+)')
+    for entry_ in logs:
+        log_message = entry_["message"]
+        match = pattern.search(log_message)
+        if match:
+            return int(match.group(1))
+    raise ValueError("No page count found in logs.")
 
 
 class ChromeDriverManager:
@@ -253,7 +277,7 @@ def get_inches_from_millimeters(mm: float) -> float:
     return mm / 25.4
 
 
-def get_pdf_from_html(driver: webdriver.Chrome, url: str) -> bytes:
+def get_pdf_from_html(driver: webdriver.Chrome, url: str) -> Tuple[bytes, int]:
     print(f"html2pdf4doc: opening URL with ChromeDriver: {url}")  # noqa: T201
 
     driver.get(url)
@@ -285,21 +309,27 @@ def get_pdf_from_html(driver: webdriver.Chrome, url: str) -> bytes:
     }
 
     class Done(Exception):
-        pass
+        def __init__(self, page_count: int):
+            super().__init__()
+            self.page_count: int = page_count
 
     datetime_start = datetime.today()
 
     logs: List[Dict[str, str]] = []
+    page_count: int = 0
     try:
         while True:
             logs = driver.get_log("browser")  # type: ignore[no-untyped-call]
             for entry_ in logs:
                 if "[HTML2PDF4DOC] Total time:" in entry_["message"]:
                     print("success: HTML2PDF4Doc completed its job.")  # noqa: T201
-                    raise Done
+
+                    page_count = extract_page_count(logs)
+
+                    raise Done(page_count)
             if (datetime.today() - datetime_start).total_seconds() > 60:
                 raise TimeoutError
-            sleep(0.5)
+            sleep(0.1)
     except Done:
         pass
     except TimeoutError:
@@ -322,7 +352,13 @@ def get_pdf_from_html(driver: webdriver.Chrome, url: str) -> bytes:
     result = driver.execute_cdp_cmd("Page.printToPDF", calculated_print_options)
 
     data = base64.b64decode(result["data"])
-    return data
+
+    if page_count == 0:
+        raise RuntimeError(
+            "html2pdf4doc: Something went wrong. "
+            "Could not capture the printed page count from Chrome."
+        )
+    return data, page_count
 
 
 def create_webdriver(
@@ -521,9 +557,20 @@ def main() -> None:
 
             url = Path(os.path.abspath(path_to_input_html)).as_uri()
 
-            pdf_bytes = get_pdf_from_html(driver, url)
+            pdf_bytes, page_count = get_pdf_from_html(driver, url)
             with open(path_to_output_pdf, "wb") as f:
                 f.write(pdf_bytes)
+
+            with measure_performance("html2pdf4doc: validating page count"):
+                reader = PdfReader(path_to_output_pdf)
+                if len(reader.pages) != page_count:
+                    raise RuntimeError(
+                        "Something went wrong with the printed page. "
+                        f"Page count mismatch: "
+                        f"PDF pages: {len(reader.pages)}, "
+                        f"html2pdf4doc pages: {page_count}."
+                    )
+
     else:
         print("html2pdf4doc: unknown command.")  # noqa: T201
         sys.exit(1)
