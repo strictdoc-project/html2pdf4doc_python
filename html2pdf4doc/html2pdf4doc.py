@@ -21,7 +21,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.core.os_manager import ChromeType, OperationSystemManager
 
-__version__ = "0.0.21"
+__version__ = "0.0.22"
 
 PATH_TO_HTML2PDF4DOC_JS = os.path.join(
     os.path.dirname(os.path.join(__file__)),
