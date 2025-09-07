@@ -11,7 +11,7 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 from time import sleep, time
-from typing import Dict, Iterator, List, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 import requests
 from pypdf import PdfReader
@@ -61,6 +61,29 @@ def extract_page_count(logs: List[Dict[str, str]]) -> int:
         if match:
             return int(match.group(1))
     raise ValueError("No page count found in logs.")
+
+
+class IntRange:
+    def __init__(self, imin: int, imax: int) -> None:
+        self.imin: int = imin
+        self.imax: int = imax
+
+    def __call__(self, arg: Any) -> Union[int, argparse.ArgumentTypeError]:
+        value: Optional[int]
+        try:
+            value = int(arg)
+        except ValueError:
+            value = None
+
+        if value is not None and self.imin <= value <= self.imax:
+            return value
+
+        raise argparse.ArgumentTypeError(
+            f"Must be an integer in the range [{self.imin}, {self.imax}]."
+        )
+
+    def __str__(self) -> str:
+        return f"{self.imin}-{self.imax}"
 
 
 class ChromeDriverManager:
@@ -486,15 +509,15 @@ def main() -> None:
     )
     command_parser_print.add_argument(
         "--page-load-timeout",
-        type=int,
-        default=2 * 60,
         # 10 minutes should be enough to print even the largest documents.
-        choices=range(0, 10 * 60),
+        type=IntRange(0, 10 * 60),
+        default=2 * 60,
         help=(
             "How long shall html2pdf4doc Python driver wait while the "
             "Chrome Driver is printing a given HTML page to PDF. "
             "This is mainly driven by the time it takes for Chrome to open an "
-            "HTML file, load it, and let HTML2PDF4Doc.js finish its job."
+            "HTML file, load it, and let HTML2PDF4Doc.js finish its job. "
+            "Allowed range: %(type)s seconds, default: %(default)s seconds."
         ),
     )
     command_parser_print.add_argument(
