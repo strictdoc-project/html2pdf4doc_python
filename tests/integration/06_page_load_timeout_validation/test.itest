@@ -1,0 +1,3 @@
+RUN: %expect_exit 2 %html2pdf print --page-load-timeout 1000000 %S/index1.html %S/Output/index1.pdf 2>&1 | filecheck %s
+
+CHECK: html2pdf4doc.py print: error: argument --page-load-timeout: Must be an integer in the range [0, 600].
