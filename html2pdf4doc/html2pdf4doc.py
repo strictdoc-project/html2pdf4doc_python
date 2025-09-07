@@ -529,6 +529,16 @@ def main() -> None:
         ),
     )
     command_parser_print.add_argument(
+        "--strict",
+        action="store_true",
+        help=(
+            "Enables Strict mode. In this mode, the library always performs a "
+            "validation of printed pages and raise a runtime error if the "
+            "validation fails. Without the Strict mode enabled, only a warning "
+            "message is printed and the execution continues."
+        ),
+    )
+    command_parser_print.add_argument(
         "paths", nargs="+", help="Paths to input HTML file."
     )
 
@@ -587,12 +597,18 @@ def main() -> None:
             with measure_performance("html2pdf4doc: validating page count"):
                 reader = PdfReader(path_to_output_pdf)
                 if len(reader.pages) != page_count:
-                    raise RuntimeError(
-                        "Something went wrong with the printed page. "
+                    error_message = (
+                        "An error occurred with the printed page. "
                         f"Page count mismatch: "
-                        f"PDF pages: {len(reader.pages)}, "
-                        f"html2pdf4doc pages: {page_count}."
+                        f"PDF pages = {len(reader.pages)}, "
+                        f"html2pdf4doc pages = {page_count}. "
+                        f"Please report this issue at: "
+                        f"https://github.com/strictdoc-project/html2pdf4doc_python."
                     )
+                    if args.strict:
+                        raise RuntimeError(error_message)
+                    else:
+                        print("html2pdf4doc: warning: " + error_message)  # noqa: T201
 
     else:
         print("html2pdf4doc: unknown command.")  # noqa: T201
