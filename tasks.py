@@ -192,6 +192,18 @@ def test_integration(
     run_invoke(context, itest_command)
 
 
+@task(aliases=["tf"])
+def test_fuzz(context):
+    run_invoke(
+        context,
+        """
+            python html2pdf4doc/html2pdf4doc_fuzzer.py
+                tests/fuzz/01_strictdoc_guide_202510/strictdoc/docs/strictdoc_01_user_guide-PDF.html
+                tests/fuzz/01_strictdoc_guide_202510/
+        """,
+    )
+
+
 @task(aliases=["t"])
 def test(context):
     test_integration(context)

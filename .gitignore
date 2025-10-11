@@ -9,3 +9,7 @@ tests/integration/.lit_test_times.txt
 tests/integration/**/Output/
 output/
 
+__pycache__/
+
+# Fuzz testing files.
+**.mut.**

@@ -16,3 +16,9 @@ ruff>=0.9
 #
 lit
 filecheck==0.0.24
+
+#
+# Fuzz tests
+#
+faker>=37.8.0
+lxml>=5.3.0
