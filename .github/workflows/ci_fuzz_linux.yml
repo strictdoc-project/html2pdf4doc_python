@@ -3,6 +3,8 @@ name: "HTML2PDF4Doc Fuzz Testing on Linux"
 on:
   pull_request:
     branches: [ "**" ]
+  schedule:
+    - cron: "00 00 * * *"
 
 jobs:
   build:
