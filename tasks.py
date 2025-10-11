@@ -4,6 +4,7 @@ import inspect
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
@@ -200,13 +201,16 @@ def test_integration(
 
 
 @task(aliases=["tf"])
-def test_fuzz(context):
+def test_fuzz(context, long: bool = False):
+    arg_long = "--long" if long else ""
+
     run_invoke(
         context,
-        """
+        f"""
             python html2pdf4doc/html2pdf4doc_fuzzer.py
                 tests/fuzz/01_strictdoc_guide_202510/strictdoc/docs/strictdoc_01_user_guide-PDF.html
                 tests/fuzz/01_strictdoc_guide_202510/
+                {arg_long}
         """,
     )
 
@@ -355,15 +359,24 @@ def _is_full_ci_test() -> bool:
     Returns True if the tag is found in PR body/title or commit message.
     Returns False for local runs or when tag not found.
     """
+
+    if "@full_test" in _get_last_commit_message_or_empty():
+        print("[is_full_ci_test] @full_test found in the last commit message.")  # noqa: T201
+        return True
+
     event_name = os.getenv("GITHUB_EVENT_NAME")
     event_path = os.getenv("GITHUB_EVENT_PATH")
 
-    # No GitHub env (e.g. local run)
+    # No GitHub env (e.g. local run).
     if not event_name or not event_path or not Path(event_path).exists():
         print(  # noqa: T201
             "[is_full_ci_test] No GitHub environment detected — running in local mode."
         )
         return False
+
+    if event_name == "schedule":
+        "[is_full_ci_test] Detected scheduled run."
+        return True
 
     try:
         with open(event_path, encoding="utf-8") as f:
@@ -376,25 +389,29 @@ def _is_full_ci_test() -> bool:
 
     tag = "@full_test"
 
-    # Check PR body/title
+    # Check PR body.
     if event_name == "pull_request":
         pr = event.get("pull_request", {})
         body = (pr.get("body") or "").lower()
-        title = (pr.get("title") or "").lower()
-        if tag in body or tag in title:
-            print(  # noqa: T201
-                "[is_full_ci_test] Detected @full_test in PR body/title."
-            )
-            return True
 
-    # Check commit message
-    if event_name == "push":
-        commit_msg = (event.get("head_commit", {}).get("message") or "").lower()
-        if tag in commit_msg:
+        if tag in body:
             print(  # noqa: T201
-                "[is_full_ci_test] Detected @full_test in commit message."
+                "[is_full_ci_test] Detected @full_test in PR title."
             )
             return True
 
     print("[is_full_ci_test] @full_test not found.")  # noqa: T201
     return False
+
+
+def _get_last_commit_message_or_empty() -> str:
+    try:
+        result = subprocess.run(
+            ["git", "log", "-1", "--pretty=%B"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip().lower()
+    except Exception:
+        return ""
