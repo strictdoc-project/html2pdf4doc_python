@@ -1,9 +1,11 @@
 # Invoke is broken on Python 3.11
 # https://github.com/pyinvoke/invoke/issues/833#issuecomment-1293148106
 import inspect
+import json
 import os
 import re
 import sys
+from pathlib import Path
 from typing import Optional
 
 if not hasattr(inspect, "getargspec"):
@@ -163,6 +165,7 @@ def lint(context):
 def test_integration(
     context,
     focus=None,
+    full=False,
     debug=False,
 ):
     clean_itest_artifacts(context)
@@ -176,6 +179,9 @@ def test_integration(
     focus_or_none = f"--filter {focus}" if focus else ""
     debug_opts = "-vv --show-all" if debug else ""
 
+    full = full or _is_full_ci_test()
+    param_full_test = "--param HTML2PDF4DOC_FULL_TEST=1" if full else ""
+
     # For now, the --threads are set to 1 because running tests parallelized
     # will result in race conditions between Web Driver Manager downloading
     # ChromeDriver.
@@ -183,6 +189,7 @@ def test_integration(
         lit
         --threads 1
         --param HTML2PDF4DOC_EXEC="{html2pdf_exec}"
+        {param_full_test}
         -v
         {debug_opts}
         {focus_or_none}
@@ -340,3 +347,54 @@ def test_docker(context, image: str = "html2pdf4doc:latest"):
             "cd tests/integration/01_hello_world && html2pdf4doc print index.html /data/output/index.pdf"
         ),
     )
+
+
+def _is_full_ci_test() -> bool:
+    """
+    Determine whether @full_test was requested in a GitHub CI run.
+    Returns True if the tag is found in PR body/title or commit message.
+    Returns False for local runs or when tag not found.
+    """
+    event_name = os.getenv("GITHUB_EVENT_NAME")
+    event_path = os.getenv("GITHUB_EVENT_PATH")
+
+    # No GitHub env (e.g. local run)
+    if not event_name or not event_path or not Path(event_path).exists():
+        print(  # noqa: T201
+            "[is_full_ci_test] No GitHub environment detected — running in local mode."
+        )
+        return False
+
+    try:
+        with open(event_path, encoding="utf-8") as f:
+            event = json.load(f)
+    except Exception as e:
+        print(  # noqa: T201
+            f"[is_full_ci_test] Failed to parse event file: {e}"
+        )
+        return False
+
+    tag = "@full_test"
+
+    # Check PR body/title
+    if event_name == "pull_request":
+        pr = event.get("pull_request", {})
+        body = (pr.get("body") or "").lower()
+        title = (pr.get("title") or "").lower()
+        if tag in body or tag in title:
+            print(  # noqa: T201
+                "[is_full_ci_test] Detected @full_test in PR body/title."
+            )
+            return True
+
+    # Check commit message
+    if event_name == "push":
+        commit_msg = (event.get("head_commit", {}).get("message") or "").lower()
+        if tag in commit_msg:
+            print(  # noqa: T201
+                "[is_full_ci_test] Detected @full_test in commit message."
+            )
+            return True
+
+    print("[is_full_ci_test] @full_test not found.")  # noqa: T201
+    return False
