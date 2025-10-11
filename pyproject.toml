@@ -70,6 +70,7 @@ development = [
 
 [project.scripts]
 html2pdf4doc = "html2pdf4doc.html2pdf4doc:main"
+html2pdf4doc_fuzzer = "html2pdf4doc.html2pdf4doc_fuzzer:main"
 
 [project.urls]
 Changelog = "https://github.com/mettta/html2pdf_python/releases/"
