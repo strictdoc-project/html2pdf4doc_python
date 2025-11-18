@@ -207,7 +207,7 @@ def test_fuzz(
     strict2: bool = False,
 ):
     """
-    @relation(SDOC-SRS-44, scope=function)
+    Run fuzz/mutation tests.
     """
 
     test_reports_dir = "build/test_reports"
