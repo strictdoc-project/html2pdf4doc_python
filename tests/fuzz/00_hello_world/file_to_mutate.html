@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <!--link rel="stylesheet" href="../../assets/base.css"/-->
+  <script defer
+    data-preloader='true'
+    data-preloader-target='[html2pdf-preloader]'
+    data-preloader-background='#F2F5F9'
+    data-forced-page-break-selectors=''
+    data-page-break-after-selectors=''
+    data-page-break-before-selectors='H1 H2'
+    data-no-break-selectors='.html2pdf4doc-no-break'
+    data-no-hanging-selectors='.html2pdf4doc-no-hanging'
+    src="../../../html2pdf4doc/html2pdf4doc_js/html2pdf4doc.min.js"></script>
+  <title>EXAMPLE - PDF</title>
+</head>
+
+<body style="padding: 1rem; background: #e3c8bd;">
+  <main style="padding: .5rem; border: 1px dotted;">
+    <p style="text-align: center">Nothing except the <code>[html2pdf]</code> element is printed.
+      <br>Only what is visible on the sheets is printed:
+    </p>
+    <div html2pdf-preloader class="main">
+
+      <!-- printed element start -->
+      <div html2pdf class="content">
+        <h1>EXAMPLE</h1>
+        <p>This image is in <code>/_assets</code>:</p>
+        <p>
+          <img alt="copy a stable link" class="image" src="_assets/image-placeholder.jpg" style="max-width: 100%;" />
+        </p>
+        <p>Some test.</p>
+      </div>
+      <!-- // printed element end -->
+
+    </div>
+    <style html2pdf-frontpage-style>
+      .html2pdf-frontpage-grid {
+        display: grid;
+        height: 100%;
+      }
+
+      .html2pdf-frontpage-grid-middle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+
+      .html2pdf-frontpage-grid-top,
+      .html2pdf-frontpage-grid-bottom {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+    </style>
+    <template html2pdf-frontpage>
+      <div class="html2pdf-frontpage-grid">
+        <div class="html2pdf-frontpage-grid-top">➰</div>
+        <div class="html2pdf-frontpage-grid-middle">
+          <h1 data-testid="document-title">EXAMPLE</h1>
+        </div>
+        <div class="html2pdf-frontpage-grid-bottom">➿</div>
+      </div>
+    </template>
+    <style html2pdf-header-style>
+      html2pdf-header {
+        padding-top: 0;
+      }
+
+      .html2pdf-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        column-gap: 32px;
+        font-size: small;
+        line-height: 1;
+        color: rgba(0, 0, 0, 0.5);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+        padding-bottom: 8px;
+      }
+
+      .html2pdf-header-left {
+        text-align: left;
+        flex-shrink: 0;
+      }
+
+      .html2pdf-header-right {
+        text-align: right;
+        font-weight: bold;
+      }
+    </style>
+    <template html2pdf-header>
+      <div class="html2pdf-header">
+        <div class="html2pdf-header-left">Documentation</div>
+        <div class="html2pdf-header-right">EXAMPLE</div>
+      </div>
+    </template>
+    <style html2pdf-footer-style>
+      html2pdf-footer {
+        padding-bottom: 0;
+      }
+
+      .html2pdf-footer {
+        display: flex;
+        justify-content: space-between;
+        column-gap: 16px;
+        font-size: small;
+        line-height: 1;
+        color: rgba(0, 0, 0, 0.5);
+        border-top: 1px solid rgba(0, 0, 0, 0.25);
+        padding-top: 8px;
+      }
+
+      .html2pdf-footer-left {
+        text-align: left;
+      }
+
+      .html2pdf-footer-right {
+        text-align: right;
+      }
+
+      .html2pdf-header-page_placeholder {
+        width: 54px;
+        /* max for pattern 888/888 */
+        flex-shrink: 0;
+        text-indent: -10000px;
+      }
+    </style>
+    <template html2pdf-footer>
+      <div html2pdf-page-number>
+        <span html2pdf-page-number-current></span>/<span html2pdf-page-number-total></span>
+      </div>
+      <div class="html2pdf-footer">
+        <div class="html2pdf-footer-left">2025-09-27</div>
+        <div class="html2pdf-footer-right"></div>
+        <div class="html2pdf-header-page_placeholder"></div>
+      </div>
+    </template>
+  </main>
+</body>
+
+</html>
