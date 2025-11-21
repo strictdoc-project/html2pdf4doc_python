@@ -11,10 +11,16 @@ PATH_TO_TESTS_FUZZ_FOLDER = os.path.dirname(__file__)
 
 @dataclass
 class FuzzConfig:
+    strict_mode_2: bool
     total_mutations: bool
 
 
 def pytest_addoption(parser):
+    parser.addoption(
+        "--fuzz-strict2",
+        action="store_true",
+        help="Enables Strict mode (level 2).",
+    )
     parser.addoption(
         "--fuzz-total-mutations",
         action="store",
@@ -26,7 +32,10 @@ def pytest_addoption(parser):
 
 @pytest.fixture
 def fuzz_config(request):
-    return FuzzConfig(total_mutations=request.config.getoption("--fuzz-total-mutations"))
+    return FuzzConfig(
+        strict_mode_2=request.config.getoption("--fuzz-strict2"),
+        total_mutations=request.config.getoption("--fuzz-total-mutations")
+    )
 
 
 def create_build_folder(test_folder: str) -> str:
