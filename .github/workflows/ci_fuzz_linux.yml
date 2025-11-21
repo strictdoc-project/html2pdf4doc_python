@@ -55,7 +55,7 @@ jobs:
       run: |
         if [ "${{ github.event_name }}" = "schedule" ]; then
           echo "🕒 Running long fuzzing..."
-          invoke test-fuzz --long
+          invoke test-fuzz --total-mutations 25
         else
           echo "🚀 Running short fuzzing..."
           invoke test-fuzz
@@ -66,6 +66,6 @@ jobs:
       if: failure() || always()
       uses: actions/upload-artifact@v4
       with:
-        name: broken-pdfs
-        path: output/
+        name: tests_fuzz_broken_pdfs
+        path: build/tests_fuzz
         retention-days: 30

@@ -12,6 +12,11 @@ mypy>=0.910
 ruff>=0.9
 
 #
+# Unit tests
+#
+pytest
+
+#
 # Integration tests
 #
 lit

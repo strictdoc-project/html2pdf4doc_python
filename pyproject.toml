@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "html2pdf4doc/html2pdf4doc.py"
+path = "html2pdf4doc/__init__.py"
 
 [tool.hatch.build]
 # Currently unused:
@@ -13,7 +13,7 @@ path = "html2pdf4doc/html2pdf4doc.py"
 # ignore-vcs = true
 
 include = [
-    "html2pdf4doc/html2pdf4doc.py",
+    "html2pdf4doc/*.py",
     "html2pdf4doc/html2pdf4doc_js/html2pdf4doc.min.js",
 ]
 
@@ -69,8 +69,8 @@ development = [
 ]
 
 [project.scripts]
-html2pdf4doc = "html2pdf4doc.html2pdf4doc:main"
-html2pdf4doc_fuzzer = "html2pdf4doc.html2pdf4doc_fuzzer:main"
+html2pdf4doc = "html2pdf4doc.main:main"
+html2pdf4doc_fuzzer = "html2pdf4doc.main_fuzzer:main"
 
 [project.urls]
 Changelog = "https://github.com/mettta/html2pdf_python/releases/"

@@ -9,7 +9,7 @@ lit_config: Any
 config.name = "html2pdf4doc Python API integration tests"
 config.test_format = lit.formats.ShTest("0")
 
-current_dir = os.getcwd()
+current_dir = os.getcwd().replace("\\", "/")
 
 html2pdf_exec = lit_config.params["HTML2PDF4DOC_EXEC"]
 assert html2pdf_exec
@@ -45,3 +45,5 @@ config.environment["HOME"] = os.environ.get("HOME", "/tmp")
 
 # In Windows CI, %ProgramW6432% is required for Selenium to properly detect browsers
 config.environment["ProgramW6432"] = os.environ.get("ProgramW6432", "")
+
+config.environment["PYTHONPATH"] = current_dir

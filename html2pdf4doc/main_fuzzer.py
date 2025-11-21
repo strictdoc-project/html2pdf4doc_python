@@ -13,8 +13,6 @@ from typing import Iterator, List
 from faker import Faker
 from lxml import etree, html
 
-from html2pdf4doc import PATH_TO_HTML2PDF4DOC_PY
-
 
 @contextlib.contextmanager
 def measure_performance(title: str) -> Iterator[None]:
@@ -71,7 +69,8 @@ def mutate_and_print(path_to_input_file: str, path_to_root: str) -> bool:
 
     cmd: List[str] = [
         sys.executable,
-        PATH_TO_HTML2PDF4DOC_PY,
+        "-m",
+        "html2pdf4doc.main",
         "print",
         "--strict",
     ]
@@ -80,7 +79,7 @@ def mutate_and_print(path_to_input_file: str, path_to_root: str) -> bool:
         cmd.append(path_to_print_[0])
         cmd.append(path_to_print_[1])
 
-    relative_path_to_mut_html = Path(path_to_root).relative_to(".")
+    relative_path_to_mut_html = Path(path_to_mut_html).relative_to(path_to_root)
     path_to_mut_output = f"output/{relative_path_to_mut_html}"
 
     def copy_files_if_needed() -> None:
@@ -143,30 +142,16 @@ def mutate_and_print(path_to_input_file: str, path_to_root: str) -> bool:
     return True
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("input_file", type=str, help="TODO")
-    parser.add_argument("root_path", type=str, help="TODO")
-    parser.add_argument(
-        "--long",
-        action="store_true",
-        help="Run the fuzzer in long mode (more iterations).",
-    )
-
-    args = parser.parse_args()
-
-    path_to_input_file = args.input_file
-    path_to_root = args.root_path
-
+def fuzz_test(
+    *, path_to_input_file: str, path_to_root: str, total_mutations: int = 20
+) -> None:
     shutil.rmtree("output", ignore_errors=True)
     Path("output").mkdir(parents=True, exist_ok=True)
 
-    total_runs = 200 if args.long else 20
     success_count, failure_count = 0, 0
-    for i in range(1, total_runs + 1):
+    for i in range(1, total_mutations + 1):
         print(  # noqa: T201
-            f"html2pdf4doc_fuzzer print cycle #{i}/{total_runs} — "
+            f"html2pdf4doc_fuzzer print cycle #{i}/{total_mutations} — "
             f"So far: 🟢{success_count} / 🔴{failure_count}",
             flush=True,
         )
@@ -176,17 +161,46 @@ def main() -> None:
         else:
             failure_count += 1
 
-    assert total_runs > 0
-    success_rate_percent = (success_count / total_runs) * 100
+    assert total_mutations > 0
+    success_rate_percent = (success_count / total_mutations) * 100
 
     print(  # noqa: T201
         f"html2pdf4doc_fuzzer: finished {'✅' if failure_count == 0 else '❌'} — "
-        f"Success rate: {success_count}/{total_runs} ({success_rate_percent}%)",
+        f"Success rate: {success_count}/{total_mutations} ({success_rate_percent}%)",
         flush=True,
     )
 
     if failure_count > 0:
         sys.exit(1)
+
+
+def main() -> None:
+    # To avoid UnicodeEncodeError on Windows when printing emojis.
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("input_file", type=str, help="TODO")
+    parser.add_argument("root_path", type=str, help="TODO")
+    parser.add_argument(
+        "--total-mutations",
+        type=int,
+        choices=range(1, 1001),
+        required=True,
+        help="An integer between 1 and 1000",
+    )
+
+    args = parser.parse_args()
+
+    path_to_input_file = args.input_file
+    path_to_root = args.root_path
+    total_mutations = args.total_mutations
+
+    fuzz_test(
+        path_to_input_file=path_to_input_file,
+        path_to_root=path_to_root,
+        total_mutations=total_mutations,
+    )
 
 
 if __name__ == "__main__":
