@@ -26,7 +26,14 @@ def measure_performance(title: str) -> Iterator[None]:
     print(f"{padded_name}{padded_time}s", flush=True)  # noqa: T201
 
 
-def mutate_and_print(path_to_input_file: str, path_to_root: str) -> bool:
+def mutate_and_print(
+    *,
+    path_to_input_file: str,
+    path_to_root: str,
+    path_to_failed_mutants_dir: str,
+    strict_mode: bool = False,
+    strict_mode_2: bool = False,
+) -> bool:
     assert os.path.isfile(path_to_input_file), path_to_input_file
     assert os.path.isdir(path_to_root), path_to_root
     if not os.path.abspath(path_to_root):
@@ -72,25 +79,31 @@ def mutate_and_print(path_to_input_file: str, path_to_root: str) -> bool:
         "-m",
         "html2pdf4doc.main",
         "print",
-        "--strict",
     ]
+    if strict_mode:
+        cmd.append("--strict")
+    if strict_mode_2:
+        cmd.append("--strict2")
 
     for path_to_print_ in paths_to_print:
         cmd.append(path_to_print_[0])
         cmd.append(path_to_print_[1])
 
     relative_path_to_mut_html = Path(path_to_mut_html).relative_to(path_to_root)
-    path_to_mut_output = f"output/{relative_path_to_mut_html}"
+    path_to_mut_output = os.path.join(
+        path_to_failed_mutants_dir, relative_path_to_mut_html
+    )
 
     def copy_files_if_needed() -> None:
         if os.path.isdir(path_to_mut_output):
             return
 
-        shutil.rmtree("output", ignore_errors=True)
-        Path("output").mkdir(parents=True, exist_ok=True)
+        Path(path_to_failed_mutants_dir).mkdir(parents=True, exist_ok=True)
 
         shutil.copytree(
-            "html2pdf4doc", "output/html2pdf4doc", dirs_exist_ok=True
+            "html2pdf4doc",
+            os.path.join(path_to_failed_mutants_dir, "html2pdf4doc"),
+            dirs_exist_ok=True,
         )
 
         shutil.rmtree(path_to_mut_output, ignore_errors=True)
@@ -109,6 +122,12 @@ def mutate_and_print(path_to_input_file: str, path_to_root: str) -> bool:
             f"{relative_path_to_mut_html}.{timestamp}.html",
         )
         shutil.copy(path_to_mut_html, path_to_mut_html_out)
+
+        if not os.path.isfile(path_to_mut_pdf):
+            print(  # noqa: T201
+                f"html2pdf4doc_fuzzer: warning: Mutated PDF is missing: {path_to_mut_pdf}"
+            )
+            return
 
         path_to_mut_pdf_out = os.path.join(
             path_to_mut_output,
@@ -143,11 +162,14 @@ def mutate_and_print(path_to_input_file: str, path_to_root: str) -> bool:
 
 
 def fuzz_test(
-    *, path_to_input_file: str, path_to_root: str, total_mutations: int = 20
+    *,
+    path_to_input_file: str,
+    path_to_root: str,
+    path_to_failed_mutants_dir: str,
+    total_mutations: int = 20,
+    strict_mode: bool = False,
+    strict_mode_2: bool = False,
 ) -> None:
-    shutil.rmtree("output", ignore_errors=True)
-    Path("output").mkdir(parents=True, exist_ok=True)
-
     success_count, failure_count = 0, 0
     for i in range(1, total_mutations + 1):
         print(  # noqa: T201
@@ -155,7 +177,13 @@ def fuzz_test(
             f"So far: 🟢{success_count} / 🔴{failure_count}",
             flush=True,
         )
-        success = mutate_and_print(path_to_input_file, path_to_root)
+        success = mutate_and_print(
+            path_to_input_file=path_to_input_file,
+            path_to_root=path_to_root,
+            path_to_failed_mutants_dir=path_to_failed_mutants_dir,
+            strict_mode=strict_mode,
+            strict_mode_2=strict_mode_2,
+        )
         if success:
             success_count += 1
         else:
@@ -182,24 +210,41 @@ def main() -> None:
 
     parser.add_argument("input_file", type=str, help="TODO")
     parser.add_argument("root_path", type=str, help="TODO")
+    parser.add_argument("path_to_failed_mutants_dir", type=str, help="TODO")
     parser.add_argument(
         "--total-mutations",
         type=int,
-        choices=range(1, 1001),
         required=True,
         help="An integer between 1 and 1000",
     )
-
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Enables Strict mode (level 1).",
+    )
+    parser.add_argument(
+        "--strict2",
+        action="store_true",
+        help="Enables Strict mode (level 2).",
+    )
     args = parser.parse_args()
 
     path_to_input_file = args.input_file
     path_to_root = args.root_path
+    path_to_failed_mutants_dir = args.path_to_failed_mutants_dir
     total_mutations = args.total_mutations
+    assert 1 <= total_mutations <= 1000, total_mutations
+
+    strict_mode = args.strict
+    strict_mode_2 = args.strict2
 
     fuzz_test(
         path_to_input_file=path_to_input_file,
         path_to_root=path_to_root,
+        path_to_failed_mutants_dir=path_to_failed_mutants_dir,
         total_mutations=total_mutations,
+        strict_mode=strict_mode,
+        strict_mode_2=strict_mode_2,
     )
 
 

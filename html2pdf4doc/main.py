@@ -295,7 +295,12 @@ def get_inches_from_millimeters(mm: float) -> float:
     return mm / 25.4
 
 
-def get_pdf_from_html(driver: webdriver.Chrome, url: str) -> Tuple[bytes, int]:
+def get_pdf_from_html(
+    *,
+    driver: webdriver.Chrome,
+    url: str,
+    strict_mode_2: bool = False,
+) -> Tuple[bytes, int]:
     print(f"html2pdf4doc: Opening URL with ChromeDriver: {url}", flush=True)  # noqa: T201
 
     driver.get(url)
@@ -357,11 +362,28 @@ def get_pdf_from_html(driver: webdriver.Chrome, url: str) -> Tuple[bytes, int]:
         )
         sys.exit(1)
 
+    bad_logs: List[Dict[str, str]] = []
+
     print("html2pdf4doc: JS logs from the print session:")  # noqa: T201
     print('"""')  # noqa: T201
     for entry in logs:
         print(entry)  # noqa: T201
+
+        if entry["level"] not in ("INFO", "DEBUG"):
+            bad_logs.append(entry)
+
     print('"""')  # noqa: T201
+
+    if len(bad_logs) > 0:
+        bad_logs_error_message = (
+            "html2pdf4doc: Something went wrong: "
+            "Detected console error/warning messages:\n"
+            f"{bad_logs}"
+        )
+        if strict_mode_2:
+            raise RuntimeError(bad_logs_error_message)
+        else:
+            print(bad_logs_error_message)  # noqa: T201
 
     #
     # Execute Print command with ChromeDriver.
@@ -530,9 +552,19 @@ def main() -> None:
         action="store_true",
         help=(
             "Enables Strict mode. In this mode, the library always performs a "
-            "validation of printed pages and raise a runtime error if the "
+            "validation of printed pages and raises a runtime error if the "
             "validation fails. Without the Strict mode enabled, only a warning "
             "message is printed and the execution continues."
+        ),
+    )
+    command_parser_print.add_argument(
+        "--strict2",
+        action="store_true",
+        help=(
+            "Enables Strict mode (level 2). In this mode, the library always performs a "
+            "validation of console logs and raises a runtime error if there are "
+            "error/warning/severe messages. Without the Strict (level 2) mode enabled, "
+            "only a warning message is printed and the execution continues."
         ),
     )
     command_parser_print.add_argument(
@@ -587,7 +619,11 @@ def main() -> None:
 
             url = Path(os.path.abspath(path_to_input_html)).as_uri()
 
-            pdf_bytes, page_count = get_pdf_from_html(driver, url)
+            pdf_bytes, page_count = get_pdf_from_html(
+                driver=driver,
+                url=url,
+                strict_mode_2=args.strict2,
+            )
             with open(path_to_output_pdf, "wb") as f:
                 f.write(pdf_bytes)
 
