@@ -1,0 +1,8 @@
+# This test verifies that the main_fuzzer.py script works as a standalone
+# command-line program.
+
+RUN: mkdir -p %project_root/build/tests_integration_fuzz/
+RUN: cp -rv %project_root/tests/fuzz/01_strictdoc_guide_202510 %project_root/build/tests_integration_fuzz/
+
+RUN: PYTHONPATH=%project_root python -m html2pdf4doc.main_fuzzer %project_root/build/tests_integration_fuzz/01_strictdoc_guide_202510/strictdoc/docs/strictdoc_01_user_guide-PDF.html %project_root/build/tests_integration_fuzz/01_strictdoc_guide_202510 --total-mutations 1 | filecheck %s --dump-input=fail
+CHECK: html2pdf4doc_fuzzer: finished ✅ — Success rate: 1/1 (100.0%)

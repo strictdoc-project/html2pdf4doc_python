@@ -57,7 +57,7 @@ jobs:
 
     - name: Download ChromeDriver
       run: |
-        python html2pdf4doc/html2pdf4doc.py get_driver
+        python -m html2pdf4doc.main get_driver
 
     - name: Run tests (Bash)
       run: |

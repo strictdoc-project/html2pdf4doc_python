@@ -102,7 +102,7 @@ def get_chrome_driver(
     run_invoke(
         context,
         """
-        python html2pdf4doc/html2pdf4doc.py get_driver
+        python -m html2pdf4doc.main get_driver
     """,
     )
 
@@ -173,9 +173,7 @@ def test_integration(
 
     get_chrome_driver(context)
 
-    cwd = os.getcwd()
-
-    html2pdf_exec = f'python3 \\"{cwd}/html2pdf4doc/html2pdf4doc.py\\"'
+    html2pdf_exec = "python3 -m html2pdf4doc.main"
 
     focus_or_none = f"--filter {focus}" if focus else ""
     debug_opts = "-vv --show-all" if debug else ""
@@ -201,16 +199,37 @@ def test_integration(
 
 
 @task(aliases=["tf"])
-def test_fuzz(context, long: bool = False):
-    arg_long = "--long" if long else ""
+def test_fuzz(context, focus=None, total_mutations: int = 10, output=False):
+    """
+    @relation(SDOC-SRS-44, scope=function)
+    """
+
+    test_reports_dir = "build/test_reports"
+
+    Path(test_reports_dir).mkdir(parents=True, exist_ok=True)
+
+    focus_argument = f"-k {focus}" if focus is not None else ""
+    long_argument = (
+        f"--fuzz-total-mutations {total_mutations}" if total_mutations else ""
+    )
+    output_argument = "--capture=no" if output else ""
+
+    run_invoke(
+        context,
+        """
+            rm -rf build/tests_fuzz
+        """,
+    )
 
     run_invoke(
         context,
         f"""
-            python html2pdf4doc/html2pdf4doc_fuzzer.py
-                tests/fuzz/01_strictdoc_guide_202510/strictdoc/docs/strictdoc_01_user_guide-PDF.html
-                tests/fuzz/01_strictdoc_guide_202510/
-                {arg_long}
+            pytest
+            {focus_argument}
+            {long_argument}
+            {output_argument}
+            -o cache_dir=build/tests_fuzz_cache
+            tests/fuzz/
         """,
     )
 

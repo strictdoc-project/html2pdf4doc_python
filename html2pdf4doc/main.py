@@ -21,18 +21,12 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.core.os_manager import ChromeType, OperationSystemManager
 
-__version__ = "0.0.22"
-
-PATH_TO_HTML2PDF4DOC_PY = __file__
-PATH_TO_HTML2PDF4DOC_JS = os.path.join(
-    os.path.dirname(os.path.join(__file__)),
-    "html2pdf4doc_js",
-    "html2pdf4doc.min.js",
+from . import (
+    DEFAULT_CACHE_DIR,
+    PATH_TO_CHROME_DRIVER_DEBUG_LOG,
+    PATH_TO_HTML2PDF4DOC_JS,
+    __version__,
 )
-
-DEFAULT_CACHE_DIR = os.path.join(Path.home(), ".html2pdf4doc", "chromedriver")
-
-PATH_TO_CHROME_DRIVER_DEBUG_LOG = "/tmp/chromedriver.log"
 
 # HTML2PDF4Doc.js prints unicode symbols to console. The following makes it work on
 # Windows which otherwise complains:

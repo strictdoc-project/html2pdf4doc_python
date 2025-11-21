@@ -35,7 +35,7 @@ RUN if [ "$HTML2PDF4DOC_SOURCE" = "pypi" ]; then \
       pip install --no-cache-dir html2pdf4doc; \
     else \
       pip install --no-cache-dir --upgrade pip && \
-      pip install --no-cache-dir git+https://github.com/mettta/html2pdf_python.git@${HTML2PDF4DOC_SOURCE}; \
+      pip install --no-cache-dir git+https://github.com/strictdoc-project/html2pdf4doc_python.git@${HTML2PDF4DOC_SOURCE}; \
     fi; \
     chmod -R 777 /opt/venv;
 
