@@ -1,3 +1,4 @@
+import datetime
 import os
 import shutil
 from dataclasses import dataclass
@@ -46,3 +47,19 @@ def create_build_folder(test_folder: str) -> str:
     shutil.copytree(test_folder, build_folder)
 
     return build_folder
+
+
+def create_failed_mutants_folder(test_folder: str) -> str:
+    assert os.path.isdir(test_folder), test_folder
+    assert os.path.isabs(test_folder), test_folder
+
+    relative_path_to_test_folder = Path(test_folder).relative_to(PATH_TO_TESTS_FUZZ_FOLDER)
+
+    mutants_folder = os.path.join(
+        "build",
+        "tests_fuzz_failed_mutants",
+        datetime.datetime.now().strftime("%Y%m%d_%H%M%S"),
+        relative_path_to_test_folder
+    )
+
+    return mutants_folder

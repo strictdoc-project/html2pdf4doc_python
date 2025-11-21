@@ -210,7 +210,7 @@ def test_fuzz(context, focus=None, total_mutations: int = 10, output=False):
 
     focus_argument = f"-k {focus}" if focus is not None else ""
     long_argument = (
-        f"--fuzz-total-mutations {total_mutations}" if total_mutations else ""
+        f"--fuzz-total-mutations={total_mutations}" if total_mutations else ""
     )
     output_argument = "--capture=no" if output else ""
 

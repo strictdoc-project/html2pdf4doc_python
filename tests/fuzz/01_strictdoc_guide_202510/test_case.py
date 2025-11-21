@@ -1,7 +1,7 @@
 import os
 
 from html2pdf4doc.main_fuzzer import fuzz_test
-from tests.fuzz.conftest import create_build_folder, FuzzConfig
+from tests.fuzz.conftest import create_build_folder, FuzzConfig, create_failed_mutants_folder
 
 PATH_TO_THIS_FOLDER = os.path.dirname(__file__)
 
@@ -14,5 +14,8 @@ def test(fuzz_config: FuzzConfig):
             "strictdoc/docs/strictdoc_01_user_guide-PDF.html"
         ),
         path_to_root=build_folder,
-        total_mutations=fuzz_config.total_mutations
+        path_to_failed_mutants_dir=create_failed_mutants_folder(PATH_TO_THIS_FOLDER),
+        total_mutations=fuzz_config.total_mutations,
+        strict_mode=True,
+        strict_mode_2=False,
     )
