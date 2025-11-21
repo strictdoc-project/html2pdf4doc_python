@@ -261,7 +261,7 @@ class ChromeDriverManager:
             try:
                 print(  # noqa: T201
                     "html2pdf4doc: "
-                    "checking if there is Google Chrome for Testing instead of "
+                    "Checking if there is Google Chrome for Testing instead of "
                     "a normal Chrome available."
                 )
 
@@ -302,7 +302,7 @@ def get_inches_from_millimeters(mm: float) -> float:
 
 
 def get_pdf_from_html(driver: webdriver.Chrome, url: str) -> Tuple[bytes, int]:
-    print(f"html2pdf4doc: opening URL with ChromeDriver: {url}")  # noqa: T201
+    print(f"html2pdf4doc: Opening URL with ChromeDriver: {url}", flush=True)  # noqa: T201
 
     driver.get(url)
 
@@ -391,7 +391,7 @@ def create_webdriver(
     page_load_timeout: int,
     debug: bool = False,
 ) -> webdriver.Chrome:
-    print("html2pdf4doc: creating ChromeDriver service.", flush=True)  # noqa: T201
+    print("html2pdf4doc: Creating ChromeDriver service.", flush=True)  # noqa: T201
 
     path_to_chrome_driver: str
     if chromedriver_argument is None:
@@ -446,13 +446,15 @@ def create_webdriver(
     # Enable the capturing of everything in JS console.
     webdriver_options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
 
-    print("html2pdf4doc: creating ChromeDriver.", flush=True)  # noqa: T201
+    print("html2pdf4doc: Creating ChromeDriver.", flush=True)  # noqa: T201
 
     driver = webdriver.Chrome(
         options=webdriver_options,
         service=service,
     )
     driver.set_page_load_timeout(page_load_timeout)
+
+    print("html2pdf4doc: ChromeDriver created.", flush=True)  # noqa: T201
 
     return driver
 
