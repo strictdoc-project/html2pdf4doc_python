@@ -199,7 +199,13 @@ def test_integration(
 
 
 @task(aliases=["tf"])
-def test_fuzz(context, focus=None, total_mutations: int = 10, output=False):
+def test_fuzz(
+    context,
+    focus=None,
+    total_mutations: int = 10,
+    output=False,
+    strict2: bool = False,
+):
     """
     @relation(SDOC-SRS-44, scope=function)
     """
@@ -212,6 +218,7 @@ def test_fuzz(context, focus=None, total_mutations: int = 10, output=False):
     long_argument = (
         f"--fuzz-total-mutations={total_mutations}" if total_mutations else ""
     )
+    strict2_argument = "--fuzz-strict2" if strict2 else ""
     output_argument = "--capture=no" if output else ""
 
     run_invoke(
@@ -227,6 +234,7 @@ def test_fuzz(context, focus=None, total_mutations: int = 10, output=False):
             pytest
             {focus_argument}
             {long_argument}
+            {strict2_argument}
             {output_argument}
             -o cache_dir=build/tests_fuzz_cache
             tests/fuzz/

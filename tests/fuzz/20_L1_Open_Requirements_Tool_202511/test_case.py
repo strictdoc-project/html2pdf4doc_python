@@ -16,6 +16,5 @@ def test(fuzz_config: FuzzConfig):
         path_to_root=build_folder,
         path_to_failed_mutants_dir=create_failed_mutants_folder(PATH_TO_THIS_FOLDER),
         total_mutations=fuzz_config.total_mutations,
-        strict_mode=True,
-        strict_mode_2=False,
+        strict_mode_2=fuzz_config.strict_mode_2,
     )

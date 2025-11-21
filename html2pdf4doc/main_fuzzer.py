@@ -31,7 +31,6 @@ def mutate_and_print(
     path_to_input_file: str,
     path_to_root: str,
     path_to_failed_mutants_dir: str,
-    strict_mode: bool = False,
     strict_mode_2: bool = False,
 ) -> bool:
     assert os.path.isfile(path_to_input_file), path_to_input_file
@@ -79,9 +78,8 @@ def mutate_and_print(
         "-m",
         "html2pdf4doc.main",
         "print",
+        "--strict",
     ]
-    if strict_mode:
-        cmd.append("--strict")
     if strict_mode_2:
         cmd.append("--strict2")
 
@@ -167,7 +165,6 @@ def fuzz_test(
     path_to_root: str,
     path_to_failed_mutants_dir: str,
     total_mutations: int = 20,
-    strict_mode: bool = False,
     strict_mode_2: bool = False,
 ) -> None:
     success_count, failure_count = 0, 0
@@ -181,7 +178,6 @@ def fuzz_test(
             path_to_input_file=path_to_input_file,
             path_to_root=path_to_root,
             path_to_failed_mutants_dir=path_to_failed_mutants_dir,
-            strict_mode=strict_mode,
             strict_mode_2=strict_mode_2,
         )
         if success:
@@ -235,7 +231,6 @@ def main() -> None:
     total_mutations = args.total_mutations
     assert 1 <= total_mutations <= 1000, total_mutations
 
-    strict_mode = args.strict
     strict_mode_2 = args.strict2
 
     fuzz_test(
@@ -243,7 +238,6 @@ def main() -> None:
         path_to_root=path_to_root,
         path_to_failed_mutants_dir=path_to_failed_mutants_dir,
         total_mutations=total_mutations,
-        strict_mode=strict_mode,
         strict_mode_2=strict_mode_2,
     )
 
