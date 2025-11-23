@@ -1,7 +1,8 @@
 # html2pdf4doc_python
 
-html2pdf4doc_python is the Python wrapper/CLI for the HTML2PDF4Doc JavaScript
-library that drives Chrome/Chromedriver to render HTML pages into PDFs.
+html2pdf4doc_python is the Python wrapper/CLI for the
+[html2pdf4doc](https://github.com/mettta/html2pdf) JavaScript
+library that prints HTML pages into PDFs using Chrome/Chromedriver.
 
 This repository focuses strictly on the Python-side automation layer. The
 rendering logic remains in the JS core.
