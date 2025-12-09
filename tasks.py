@@ -116,6 +116,7 @@ def lint_ruff_format(context):
                 format
                 *.py
                 html2pdf4doc/
+                tests/unit/
                 tests/integration/
         """,
     )
@@ -131,7 +132,7 @@ def lint_ruff(context):
     run_invoke(
         context,
         """
-            ruff check *.py html2pdf4doc/ --fix --cache-dir build/ruff
+            ruff check *.py html2pdf4doc/ tests/unit/ --fix --cache-dir build/ruff
         """,
     )
 
@@ -144,7 +145,7 @@ def lint_mypy(context):
     run_invoke(
         context,
         """
-            mypy html2pdf4doc/
+            mypy html2pdf4doc/ tests/unit/
                 --show-error-codes
                 --disable-error-code=import
                 --disable-error-code=misc
@@ -160,6 +161,29 @@ def lint(context):
     lint_ruff_format(context)
     lint_ruff(context)
     lint_mypy(context)
+
+
+@task(aliases=["tu"])
+def test_unit(context, focus=None, output=False):
+    focus_argument = f"-k {focus}" if focus is not None else ""
+    output_argument = "--capture=no" if output else ""
+
+    cwd = os.getcwd()
+
+    path_to_coverage_file = f"{cwd}/build/coverage/unit/.coverage"
+    run_invoke(
+        context,
+        f"""
+            coverage run
+            --data-file={path_to_coverage_file}
+            -m pytest
+            {focus_argument}
+            {output_argument}
+            -o cache_dir=build/pytest_unit
+            -o junit_suite_name="HTML2PDF4Doc unit tests"
+            tests/unit/
+        """,
+    )
 
 
 @task(aliases=["ti"])

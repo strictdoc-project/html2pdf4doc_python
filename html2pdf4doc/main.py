@@ -9,6 +9,7 @@ import subprocess
 import sys
 import zipfile
 from datetime import datetime
+from enum import IntEnum
 from pathlib import Path
 from time import sleep, time
 from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
@@ -58,6 +59,18 @@ def extract_page_count(logs: List[Dict[str, str]]) -> int:
     raise ValueError("No page count found in logs.")
 
 
+class HPDExitCode(IntEnum):
+    GENERAL_ERROR = 1
+    COULD_NOT_FIND_CHROME = 5
+    DID_NOT_RECEIVE_SUCCESS_STATUS_FROM_HTML2PDF4DOC_JS = 6
+
+
+class HPDError(RuntimeError):
+    def __init__(self, message: str, exit_code: int):
+        super().__init__(message)
+        self.exit_code: int = exit_code
+
+
 class IntRange:
     def __init__(self, imin: int, imax: int) -> None:
         self.imin: int = imin
@@ -87,9 +100,9 @@ class ChromeDriverManager:
 
         # If Web Driver Manager cannot detect Chrome, it returns None.
         if chrome_version is None:
-            raise RuntimeError(
-                "html2pdf4doc: "
-                "Web Driver Manager could not detect an existing Chrome installation."
+            raise HPDError(
+                "Web Driver Manager could not detect an existing Chrome installation.",
+                exit_code=HPDExitCode.COULD_NOT_FIND_CHROME,
             )
 
         chrome_major_version = chrome_version.split(".")[0]
@@ -145,15 +158,16 @@ class ChromeDriverManager:
 
         return path_to_downloaded_chrome_driver
 
-    @staticmethod
+    @classmethod
     def _download_chromedriver(
+        cls,
         chrome_major_version: str,
         os_type: str,
         path_to_driver_cache_dir: str,
         path_to_cached_chrome_driver: str,
     ) -> str:
         url = "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json"
-        response = ChromeDriverManager.send_http_get_request(url)
+        response = cls.send_http_get_request(url)
         if response is None:
             raise RuntimeError(
                 "Could not download known-good-versions-with-downloads.json"
@@ -195,7 +209,7 @@ class ChromeDriverManager:
         print(  # noqa: T201
             f"html2pdf4doc: downloading ChromeDriver from: {driver_url}"
         )
-        response = ChromeDriverManager.send_http_get_request(driver_url)
+        response = cls.send_http_get_request(driver_url)
 
         if response is None:
             raise RuntimeError(
@@ -360,7 +374,9 @@ def get_pdf_from_html(
             "error: html2pdf4doc: "
             "could not receive a successful completion status from HTML2PDF4Doc."
         )
-        sys.exit(1)
+        sys.exit(
+            HPDExitCode.DID_NOT_RECEIVE_SUCCESS_STATUS_FROM_HTML2PDF4DOC_JS
+        )
 
     bad_logs: List[Dict[str, str]] = []
 
@@ -402,6 +418,7 @@ def get_pdf_from_html(
 
 
 def create_webdriver(
+    chrome_driver_manager: ChromeDriverManager,
     chromedriver_argument: Optional[str],
     path_to_cache_dir: str,
     page_load_timeout: int,
@@ -411,7 +428,7 @@ def create_webdriver(
 
     path_to_chrome_driver: str
     if chromedriver_argument is None:
-        path_to_chrome_driver = ChromeDriverManager().get_chrome_driver(
+        path_to_chrome_driver = chrome_driver_manager.get_chrome_driver(
             path_to_cache_dir
         )
     else:
@@ -475,7 +492,7 @@ def create_webdriver(
     return driver
 
 
-def main() -> None:
+def _main() -> None:
     if not os.path.isfile(PATH_TO_HTML2PDF4DOC_JS):
         raise RuntimeError(
             f"Corrupted html2pdf4doc package bundle. "
@@ -573,13 +590,15 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    chrome_driver_manager = ChromeDriverManager()
+
     path_to_cache_dir: str
     if args.command == "get_driver":
         path_to_cache_dir = (
             args.cache_dir if args.cache_dir is not None else DEFAULT_CACHE_DIR
         )
 
-        path_to_chrome = ChromeDriverManager().get_chrome_driver(
+        path_to_chrome = chrome_driver_manager.get_chrome_driver(
             path_to_cache_dir
         )
         print(f"html2pdf4doc: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
@@ -594,6 +613,7 @@ def main() -> None:
             args.cache_dir if args.cache_dir is not None else DEFAULT_CACHE_DIR
         )
         driver: webdriver.Chrome = create_webdriver(
+            chrome_driver_manager,
             args.chromedriver,
             path_to_cache_dir,
             page_load_timeout,
@@ -645,7 +665,15 @@ def main() -> None:
 
     else:
         print("html2pdf4doc: unknown command.")  # noqa: T201
-        sys.exit(1)
+        sys.exit(HPDExitCode.GENERAL_ERROR)
+
+
+def main() -> None:
+    try:
+        _main()
+    except HPDError as error_:
+        print("error: html2pdf4doc: " + str(error_), flush=True)  # noqa: T201
+        sys.exit(error_.exit_code)
 
 
 if __name__ == "__main__":
