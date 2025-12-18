@@ -1963,6 +1963,15 @@
         html2pdf
         class="content"
       ><div class="pdf-toc" data-testid="pdf-toc-list">
+
+          <div id="html2pdf4doc_mutate_this">
+              <!-- This tag is only used for integration testing that fuzzing harness works
+                   with the --mutations=linear argument. It doesn't really make sense to test
+                   the linear mutations with this large document that will have so many page
+                   breaks, negating the benefits of the linear algorithm.
+               -->
+          </div>
+
     <div class="pdf-toc-row">
     <span class="pdf-toc-cell"></span>
     <span class="pdf-toc-cell" style="text-align: center;font-weight: bold;">Table of contents</span>
