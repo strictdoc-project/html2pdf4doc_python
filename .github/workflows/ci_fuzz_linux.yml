@@ -64,7 +64,7 @@ jobs:
     - name: Upload broken PDFs as artifact
       # Always upload, even if job fails.
       if: failure() || always()
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: tests_fuzz_broken_pdfs
         path: build/tests_fuzz
