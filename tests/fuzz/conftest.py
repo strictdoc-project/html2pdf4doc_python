@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from html2pdf4doc import PATH_TO_HTML2PDF4DOC_JS
+
 PATH_TO_TESTS_FUZZ_FOLDER = os.path.dirname(__file__)
 
 
@@ -54,6 +56,8 @@ def create_build_folder(test_folder: str) -> str:
     )
 
     shutil.copytree(test_folder, build_folder)
+
+    shutil.copy(PATH_TO_HTML2PDF4DOC_JS, build_folder)
 
     return build_folder
 

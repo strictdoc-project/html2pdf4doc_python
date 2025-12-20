@@ -5,6 +5,7 @@ import os.path
 import random
 import shutil
 import sys
+from enum import Enum
 from pathlib import Path
 from subprocess import CalledProcessError, CompletedProcess, TimeoutExpired, run
 from time import time
@@ -12,6 +13,7 @@ from typing import Iterator, List
 
 from faker import Faker
 from lxml import etree, html
+from lxml.html import HtmlElement
 
 
 @contextlib.contextmanager
@@ -26,37 +28,77 @@ def measure_performance(title: str) -> Iterator[None]:
     print(f"{padded_name}{padded_time}s", flush=True)  # noqa: T201
 
 
+def rewrite_js_path_to_local(html_text: str) -> str:
+    tree = html.fromstring(html_text)
+    for script in tree.xpath("//script[@src]"):
+        src = script.get("src")
+        if src.endswith("html2pdf4doc.min.js"):
+            script.set("src", "html2pdf4doc.min.js")
+    return str(html.tostring(tree, encoding="unicode"))
+
+
+class MutationType(str, Enum):
+    RANDOM = "random"
+    INCREMENTAL = "incremental"
+
+    @classmethod
+    def all_as_str(cls) -> List[str]:
+        return [t.value for t in cls]
+
+
+def mutate_html_content(
+    tree: HtmlElement, mutation_type: MutationType, mutation_cycle: int
+) -> None:
+    if mutation_type == MutationType.RANDOM:
+        # Pick a random element.
+        elems = tree.xpath("//p | //td")
+        if elems:
+            for _i in range(25):
+                node = random.choice(elems)
+
+                print("Mutating node:", node.tag, flush=True)  # noqa: T201
+
+                n_sentences = random.randint(1, 100)
+
+                fake = Faker()
+                extra_text = fake.text(max_nb_chars=10 * n_sentences)
+
+                node.text = extra_text
+    elif mutation_type == MutationType.INCREMENTAL:
+        elems = tree.xpath('//*[@id="html2pdf4doc_mutate_this"]')
+        assert len(elems) == 1, (
+            'Expected element with id="html2pdf4doc_mutate_this" to be found.'
+        )
+
+        filler_element = elems[0]
+        filler_element.attrib["style"] = f"height: {mutation_cycle}px;"
+    else:
+        raise AssertionError("Must not reach here.")
+
+
 def mutate_and_print(
     *,
     path_to_input_file: str,
     path_to_root: str,
     path_to_failed_mutants_dir: str,
+    cycle: int,
+    mutation_type: MutationType,
     strict_mode_2: bool = False,
 ) -> bool:
     assert os.path.isfile(path_to_input_file), path_to_input_file
     assert os.path.isdir(path_to_root), path_to_root
+    assert 0 <= cycle <= 1000, cycle
+
     if not os.path.abspath(path_to_root):
         path_to_root = os.path.abspath(path_to_root)
 
-    text = open(path_to_input_file, encoding="utf-8").read()
+    with open(path_to_input_file, encoding="utf-8") as input_file_:
+        text = input_file_.read()
 
     # Parse HTML into DOM
     tree = html.fromstring(text)
 
-    # Pick a random element
-    elems = tree.xpath("//p | //td")
-    if elems:
-        for _i in range(25):
-            node = random.choice(elems)
-
-            print("Mutating node:", node.tag, flush=True)  # noqa: T201
-
-            n_sentences = random.randint(1, 100)
-
-            fake = Faker()
-            extra_text = fake.text(max_nb_chars=10 * n_sentences)
-
-            node.text = extra_text
+    mutate_html_content(tree, mutation_type, cycle)
 
     # Serialize back to HTML
     mutated_html = etree.tostring(
@@ -87,7 +129,8 @@ def mutate_and_print(
         cmd.append(path_to_print_[0])
         cmd.append(path_to_print_[1])
 
-    relative_path_to_mut_html = Path(path_to_mut_html).relative_to(path_to_root)
+    path_to_mut_dir = os.path.dirname(path_to_mut_html)
+    relative_path_to_mut_html = Path(path_to_mut_dir).relative_to(path_to_root)
     path_to_mut_output = os.path.join(
         path_to_failed_mutants_dir, relative_path_to_mut_html
     )
@@ -165,6 +208,7 @@ def fuzz_test(
     path_to_root: str,
     path_to_failed_mutants_dir: str,
     total_mutations: int = 20,
+    mutation_type: MutationType = MutationType.RANDOM,
     strict_mode_2: bool = False,
 ) -> None:
     success_count, failure_count = 0, 0
@@ -178,6 +222,8 @@ def fuzz_test(
             path_to_input_file=path_to_input_file,
             path_to_root=path_to_root,
             path_to_failed_mutants_dir=path_to_failed_mutants_dir,
+            cycle=i,
+            mutation_type=mutation_type,
             strict_mode_2=strict_mode_2,
         )
         if success:
@@ -214,6 +260,12 @@ def main() -> None:
         help="An integer between 1 and 1000",
     )
     parser.add_argument(
+        "--mutations",
+        type=str,
+        choices=MutationType.all_as_str(),
+        help="Algorithm to use for mutations.",
+    )
+    parser.add_argument(
         "--strict",
         action="store_true",
         help="Enables Strict mode (level 1).",
@@ -231,6 +283,8 @@ def main() -> None:
     total_mutations = args.total_mutations
     assert 1 <= total_mutations <= 1000, total_mutations
 
+    mutation_type = MutationType(args.mutations)
+
     strict_mode_2 = args.strict2
 
     fuzz_test(
@@ -238,6 +292,7 @@ def main() -> None:
         path_to_root=path_to_root,
         path_to_failed_mutants_dir=path_to_failed_mutants_dir,
         total_mutations=total_mutations,
+        mutation_type=mutation_type,
         strict_mode_2=strict_mode_2,
     )
 
