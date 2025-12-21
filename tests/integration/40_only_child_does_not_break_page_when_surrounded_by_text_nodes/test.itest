@@ -1,0 +1,4 @@
+RUN: %html2pdf print %S/strictdoc/docs/index.html %S/Output/index.pdf
+
+RUN: %check_exists --file "%S/Output/index.pdf"
+RUN: python %S/test.py
