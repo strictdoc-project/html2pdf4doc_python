@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-__version__ = "0.0.27"
+__version__ = "0.0.28"
 
 PATH_TO_HTML2PDF4DOC_PY = os.path.join(
     os.path.dirname(os.path.join(__file__)),
