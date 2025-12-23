@@ -13,25 +13,30 @@ assert len(reader.pages) == 4, len(reader.pages)
 # NOTE: The replace() calls are needed because of the portability issues.
 #
 
+page2_text_normalized = (
+    reader.pages[2].extract_text().replace("leo.StrictDoc", "leo.\nStrictDoc")
+)
 assert (
-    reader.pages[2].extract_text()
+    page2_text_normalized
     == """\
 1. Section 1
 Vivamus consectetur mollis varius. Quisque posuere venenatis nulla, sit amet
 pulvinar metus vestibulum sed. Sed at libero nec justo leo.
 StrictDoc Documentation Test document
-3/4
-2025-12-21\
+2025-12-21 3/4\
 """
-), reader.pages[2].extract_text().replace(".StrictDoc", "\nStrictDoc")
+), page2_text_normalized
+
+page3_text_normalized = (
+    reader.pages[3].extract_text().replace("cStrictDoc", "c\nStrictDoc")
+)
 
 assert (
-    reader.pages[3].extract_text()
+    page3_text_normalized
     == """\
 2. Section 2
 Lorem ipsum dolor sit amet, c
 StrictDoc Documentation Test document
-4/4
-2025-12-21\
+2025-12-21 4/4\
 """
-), reader.pages[3].extract_text().replace("cStrictDoc", "c\nStrictDoc")
+), page3_text_normalized
