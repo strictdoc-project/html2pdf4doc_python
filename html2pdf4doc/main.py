@@ -300,8 +300,8 @@ class ChromeDriverManager:
                     f"html2pdf4doc: Error getting Google Chrome for Testing version: {e}"
                 )
 
-        os_manager = OperationSystemManager(os_type=None)  # type: ignore[no-untyped-call]
-        version: str = os_manager.get_browser_version_from_os(ChromeType.GOOGLE)  # type: ignore[no-untyped-call]
+        os_manager = OperationSystemManager(os_type=None)  # type: ignore[no-untyped-call,unused-ignore]
+        version: str = os_manager.get_browser_version_from_os(ChromeType.GOOGLE)  # type: ignore[no-untyped-call,unused-ignore]
         return version
 
 
@@ -356,7 +356,7 @@ def get_pdf_from_html(
     page_count: int = 0
     try:
         while True:
-            logs = driver.get_log("browser")  # type: ignore[no-untyped-call]
+            logs = driver.get_log("browser")  # type: ignore[no-untyped-call,unused-ignore]
             for entry_ in logs:
                 if "[HTML2PDF4DOC] Total time:" in entry_["message"]:
                     print("success: HTML2PDF4Doc completed its job.")  # noqa: T201
