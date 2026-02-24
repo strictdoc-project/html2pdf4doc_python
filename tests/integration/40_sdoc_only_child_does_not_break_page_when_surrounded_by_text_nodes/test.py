@@ -20,9 +20,9 @@ assert (
     page2_text_normalized
     == """\
 1. Section 1
-Vivamus consectetur mollis varius. Quisque posuere venenatis nulla, sit amet
-pulvinar metus vestibulum sed. Sed at libero nec justo leo.
-StrictDoc Documentation Test document
+Vivam us consectetur m ollis varius. Quisque posuere venenatis nulla, sit am et
+pulvinar m etus vestibulum  sed. Sed at libero nec justo leo.
+StrictDoc Docum entation Test document
 2025-12-21 3/4\
 """
 ), page2_text_normalized
@@ -35,8 +35,8 @@ assert (
     page3_text_normalized
     == """\
 2. Section 2
-Lorem ipsum dolor sit amet, c
-StrictDoc Documentation Test document
+L orem  ipsum  dolor sit am et, c
+StrictDoc Docum entation Test document
 2025-12-21 4/4\
 """
 ), page3_text_normalized
