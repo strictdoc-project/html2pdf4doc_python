@@ -18,6 +18,7 @@ import requests
 from pypdf import PdfReader
 from requests import Response
 from selenium import webdriver
+from selenium.common import SessionNotCreatedException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.core.os_manager import ChromeType, OperationSystemManager
@@ -481,10 +482,30 @@ def create_webdriver(
 
     print("html2pdf4doc: Creating ChromeDriver.", flush=True)  # noqa: T201
 
-    driver = webdriver.Chrome(
-        options=webdriver_options,
-        service=service,
-    )
+    # When running sequential PDF exports, macOS CI sometimes throws a
+    # SessionNotCreatedException during driver creation.
+    # Hypothesis: The OS kernel might need additional time to release TCP ports
+    # and IPC locks from the previous headless Chrome instance before a new one
+    # can successfully bind.
+    # Workaround: Use 3-attempt retry loop with a 1-second delay between attempts.
+    driver = None
+    for attempt in range(3):
+        try:
+            driver = webdriver.Chrome(
+                options=webdriver_options,
+                service=service,
+            )
+            break  # Success!
+        except SessionNotCreatedException:
+            if attempt == 2:
+                raise  # Out of retries
+            print(  # noqa: T201
+                "html2pdf4doc: Caught SessionNotCreatedException. Retrying in 1s...",
+                flush=True,
+            )
+            sleep(1.0)
+    assert driver is not None
+
     driver.set_page_load_timeout(page_load_timeout)
 
     print("html2pdf4doc: ChromeDriver created.", flush=True)  # noqa: T201
