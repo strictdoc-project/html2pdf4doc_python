@@ -151,7 +151,7 @@ def lint_mypy(context):
                 --disable-error-code=misc
                 --cache-dir=build/mypy
                 --strict
-                --python-version=3.9
+                --python-version=3.10
         """,
     )
 
