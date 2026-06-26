@@ -8,8 +8,8 @@ twine
 #
 # Lint
 #
-mypy>=1.19.1
-ruff>=0.15.11
+mypy>=2.1.0
+ruff>=0.15.20
 
 #
 # Unit tests
@@ -21,10 +21,10 @@ coverage
 # Integration tests
 #
 lit
-filecheck==0.0.24
+filecheck==1.0.3
 
 #
 # Fuzz tests
 #
-faker>=37.12.0
-lxml>=6.1.0
+faker>=40.23.0
+lxml>=6.1.1
