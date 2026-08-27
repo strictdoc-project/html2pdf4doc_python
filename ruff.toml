@@ -72,6 +72,9 @@ ignore = [
     # Too many statements
     "PLR0915",
 
+    # Too many arguments
+    "PLR0917",
+
     # TBD: Enable: Use `sys.exit()` instead of `exit`
     "PLR1722",
 
