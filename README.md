@@ -24,7 +24,22 @@ in the `.github/workflows` folder.
 
 ## Usage
 
-TBD
+Download or reuse ChromeDriver with SSL verification enabled by default:
+
+```bash
+python -m html2pdf4doc.main get_driver
+python -m html2pdf4doc.main print input.html output.pdf
+```
+
+### Disable SSL (corporate environments)
+
+Disable SSL certificate verification only when needed, for example in a
+restricted corporate environment with custom TLS interception:
+
+```bash
+python -m html2pdf4doc.main get_driver --disable-ssl-check
+python -m html2pdf4doc.main print --disable-ssl-check input.html output.pdf
+```
 
 ## Developer guide
 

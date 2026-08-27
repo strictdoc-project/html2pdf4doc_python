@@ -7,6 +7,7 @@ import platform
 import re
 import subprocess
 import sys
+import warnings
 import zipfile
 from datetime import datetime
 from enum import IntEnum
@@ -21,6 +22,7 @@ from selenium import webdriver
 from selenium.common import SessionNotCreatedException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from urllib3.exceptions import InsecureRequestWarning
 from webdriver_manager.core.os_manager import ChromeType, OperationSystemManager
 
 from . import (
@@ -36,6 +38,8 @@ from . import (
 # How to make python 3 print() utf8
 # https://stackoverflow.com/questions/3597480/how-to-make-python-3-print-utf8
 sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf8", closefd=False)
+
+SSL_CHECK_DISABLED_WARNING_PRINTED = False
 
 
 @contextlib.contextmanager
@@ -58,6 +62,23 @@ def extract_page_count(logs: List[Dict[str, str]]) -> int:
         if match:
             return int(match.group(1))
     raise ValueError("No page count found in logs.")
+
+
+def print_ssl_check_disabled_warning() -> None:
+    global SSL_CHECK_DISABLED_WARNING_PRINTED  # noqa: PLW0603
+
+    if SSL_CHECK_DISABLED_WARNING_PRINTED:
+        return
+
+    print(  # noqa: T201
+        "warning: html2pdf4doc: SSL certificate verification is disabled "
+        "for HTTP downloads. This is insecure and should only be used "
+        "in trusted environments. Re-enable verification by removing "
+        "--disable-ssl-check.",
+        file=sys.stderr,
+        flush=True,
+    )
+    SSL_CHECK_DISABLED_WARNING_PRINTED = True
 
 
 class HPDExitCode(IntEnum):
@@ -96,7 +117,9 @@ class IntRange:
 
 
 class ChromeDriverManager:
-    def get_chrome_driver(self, path_to_cache_dir: str) -> str:
+    def get_chrome_driver(
+        self, path_to_cache_dir: str, verify_ssl: bool = True
+    ) -> str:
         chrome_version: Optional[str] = self.get_chrome_version()
 
         # If Web Driver Manager cannot detect Chrome, it returns None.
@@ -153,6 +176,7 @@ class ChromeDriverManager:
             os_type,
             path_to_cached_chrome_driver_dir,
             path_to_cached_chrome_driver,
+            verify_ssl,
         )
         assert os.path.isfile(path_to_downloaded_chrome_driver)
         os.chmod(path_to_downloaded_chrome_driver, 0o755)
@@ -166,9 +190,10 @@ class ChromeDriverManager:
         os_type: str,
         path_to_driver_cache_dir: str,
         path_to_cached_chrome_driver: str,
+        verify_ssl: bool = True,
     ) -> str:
         url = "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json"
-        response = cls.send_http_get_request(url)
+        response = cls.send_http_get_request(url, verify_ssl=verify_ssl)
         if response is None:
             raise RuntimeError(
                 "Could not download known-good-versions-with-downloads.json"
@@ -210,7 +235,7 @@ class ChromeDriverManager:
         print(  # noqa: T201
             f"html2pdf4doc: downloading ChromeDriver from: {driver_url}"
         )
-        response = cls.send_http_get_request(driver_url)
+        response = cls.send_http_get_request(driver_url, verify_ssl=verify_ssl)
 
         if response is None:
             raise RuntimeError(
@@ -234,22 +259,34 @@ class ChromeDriverManager:
         return path_to_cached_chrome_driver
 
     @staticmethod
-    def send_http_get_request(url: str) -> Response:
+    def send_http_get_request(url: str, verify_ssl: bool = True) -> Response:
         last_error: Optional[Exception] = None
         for attempt in range(1, 4):
             print(  # noqa: T201
                 f"html2pdf4doc: sending GET request attempt {attempt}: {url}"
             )
             try:
-                return requests.get(url, timeout=(5, 5))
+                if verify_ssl:
+                    return requests.get(url, timeout=(5, 5), verify=True)
+
+                print_ssl_check_disabled_warning()
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", InsecureRequestWarning)
+                    return requests.get(url, timeout=(5, 5), verify=False)
+            except requests.exceptions.SSLError as ssl_error_:
+                raise RuntimeError(
+                    "SSL certificate verification failed for URL: "
+                    f"{url}. If you trust the target and need to bypass "
+                    "certificate verification, rerun the command with "
+                    "--disable-ssl-check."
+                ) from ssl_error_
             except requests.exceptions.ConnectTimeout as connect_timeout_:
                 last_error = connect_timeout_
             except requests.exceptions.ReadTimeout as read_timeout_:
                 last_error = read_timeout_
-            except Exception as exception_:
-                raise AssertionError(
-                    "html2pdf4doc: unknown exception", exception_
-                ) from None
+            except requests.exceptions.RequestException as request_error_:
+                last_error = request_error_
+                break
         print(  # noqa: T201
             f"html2pdf4doc: "
             f"failed to get response for URL: {url} with error: {last_error}"
@@ -423,6 +460,7 @@ def create_webdriver(
     chromedriver_argument: Optional[str],
     path_to_cache_dir: str,
     page_load_timeout: int,
+    verify_ssl: bool = True,
     debug: bool = False,
 ) -> webdriver.Chrome:
     print("html2pdf4doc: Creating ChromeDriver service.", flush=True)  # noqa: T201
@@ -430,7 +468,7 @@ def create_webdriver(
     path_to_chrome_driver: str
     if chromedriver_argument is None:
         path_to_chrome_driver = chrome_driver_manager.get_chrome_driver(
-            path_to_cache_dir
+            path_to_cache_dir, verify_ssl=verify_ssl
         )
     else:
         path_to_chrome_driver = chromedriver_argument
@@ -545,6 +583,14 @@ def _main() -> None:
         type=str,
         help="Optional path to a cache directory whereto the ChromeDriver is downloaded.",
     )
+    command_parser_get_driver.add_argument(
+        "--disable-ssl-check",
+        action="store_true",
+        help=(
+            "Disables SSL certificate verification for HTTP downloads. "
+            "By default SSL certificate verification is enabled."
+        ),
+    )
 
     #
     # Print command.
@@ -563,6 +609,14 @@ def _main() -> None:
         "--cache-dir",
         type=str,
         help="Optional path to a cache directory whereto the ChromeDriver is downloaded.",
+    )
+    command_parser_print.add_argument(
+        "--disable-ssl-check",
+        action="store_true",
+        help=(
+            "Disables SSL certificate verification for HTTP downloads. "
+            "By default SSL certificate verification is enabled."
+        ),
     )
     command_parser_print.add_argument(
         "--page-load-timeout",
@@ -620,7 +674,8 @@ def _main() -> None:
         )
 
         path_to_chrome = chrome_driver_manager.get_chrome_driver(
-            path_to_cache_dir
+            path_to_cache_dir,
+            verify_ssl=not args.disable_ssl_check,
         )
         print(f"html2pdf4doc: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
         sys.exit(0)
@@ -638,6 +693,7 @@ def _main() -> None:
             args.chromedriver,
             path_to_cache_dir,
             page_load_timeout,
+            verify_ssl=not args.disable_ssl_check,
             debug=args.debug,
         )
 
