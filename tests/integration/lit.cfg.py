@@ -7,7 +7,7 @@ config: Any
 lit_config: Any
 
 config.name = "html2pdf4doc Python API integration tests"
-config.test_format = lit.formats.ShTest("0")
+config.test_format = lit.formats.ShTest()
 
 current_dir = os.getcwd().replace("\\", "/")
 

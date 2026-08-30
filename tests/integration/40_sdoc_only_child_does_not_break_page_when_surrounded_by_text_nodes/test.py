@@ -14,7 +14,10 @@ assert len(reader.pages) == 4, len(reader.pages)
 #
 
 page2_text_normalized = (
-    reader.pages[2].extract_text().replace("leo.StrictDoc", "leo.\nStrictDoc")
+    reader.pages[2]
+    .extract_text()
+    .replace("leo.StrictDoc", "leo.\nStrictDoc")
+    .replace("3 / 4", "3/4")
 )
 assert (
     page2_text_normalized
@@ -28,7 +31,10 @@ StrictDoc Documentation Test document
 ), page2_text_normalized
 
 page3_text_normalized = (
-    reader.pages[3].extract_text().replace("cStrictDoc", "c\nStrictDoc")
+    reader.pages[3]
+    .extract_text()
+    .replace("cStrictDoc", "c\nStrictDoc")
+    .replace("4 / 4", "4/4")
 )
 
 assert (
