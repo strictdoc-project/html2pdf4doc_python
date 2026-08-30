@@ -620,8 +620,8 @@ def _main() -> None:
     )
     command_parser_print.add_argument(
         "--page-load-timeout",
-        # 60 minutes should be enough to print even the largest documents.
-        type=IntRange(0, 60 * 60),
+        # 10 minutes should be enough to print even the largest documents.
+        type=IntRange(0, 10 * 60),
         default=2 * 60,
         help=(
             "How long shall html2pdf4doc Python driver wait while the "
