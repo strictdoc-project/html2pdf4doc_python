@@ -118,12 +118,20 @@ class IntRange:
 
 class ChromeDriverManager:
     def get_chrome_driver(
-        self, path_to_cache_dir: str, verify_ssl: bool = True
+        self,
+        path_to_cache_dir: str,
+        verify_ssl: bool = True,
+        chrome_binary: Optional[str] = None,
     ) -> str:
-        chrome_version: Optional[str] = self.get_chrome_version()
+        chrome_version: Optional[str] = self.get_chrome_version(chrome_binary)
 
         # If Web Driver Manager cannot detect Chrome, it returns None.
         if chrome_version is None:
+            if chrome_binary is not None:
+                raise HPDError(
+                    f"Could not determine the Chrome version from --chrome-binary: {chrome_binary!r}.",
+                    exit_code=HPDExitCode.COULD_NOT_FIND_CHROME,
+                )
             raise HPDError(
                 "Web Driver Manager could not detect an existing Chrome installation.",
                 exit_code=HPDExitCode.COULD_NOT_FIND_CHROME,
@@ -296,7 +304,30 @@ class ChromeDriverManager:
         ) from last_error
 
     @staticmethod
-    def get_chrome_version() -> Optional[str]:
+    def _probe_chrome_version(chrome_binary: str) -> str:
+        # Shared by the macOS special case below and --chrome-binary.
+        version_output = subprocess.run(
+            [chrome_binary, "--version"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        chrome_version = version_output.stdout.strip()
+        match = re.search(r"\d+(\.\d+)+", chrome_version)
+        if not match:
+            raise RuntimeError("Cannot extract the version part using regex.")
+        return match.group(0)
+
+    @staticmethod
+    def get_chrome_version(
+        chrome_binary: Optional[str] = None,
+    ) -> Optional[str]:
+        if chrome_binary is not None:
+            try:
+                return ChromeDriverManager._probe_chrome_version(chrome_binary)
+            except (OSError, subprocess.CalledProcessError, RuntimeError):
+                return None
+
         # Special case: GitHub Actions macOS CI machines have both
         # Google Chrome for Testing and normal Google Chrome installed, and
         # sometimes their versions are of different major version families.
@@ -311,20 +342,9 @@ class ChromeDriverManager:
                     "a normal Chrome available."
                 )
 
-                version_output = subprocess.run(
-                    [chrome_path, "--version"],
-                    capture_output=True,
-                    text=True,
-                    check=True,
+                chrome_version = ChromeDriverManager._probe_chrome_version(
+                    chrome_path
                 )
-                chrome_version = version_output.stdout.strip()
-                match = re.search(r"\d+(\.\d+)+", chrome_version)
-                if not match:
-                    raise RuntimeError(
-                        "Cannot extract the version part using regex."
-                    )
-
-                chrome_version = match.group(0)
 
                 print(  # noqa: T201
                     f"html2pdf4doc: Google Chrome for Testing Version: {chrome_version}"
@@ -462,13 +482,16 @@ def create_webdriver(
     page_load_timeout: int,
     verify_ssl: bool = True,
     debug: bool = False,
+    chrome_binary: Optional[str] = None,
 ) -> webdriver.Chrome:
     print("html2pdf4doc: Creating ChromeDriver service.", flush=True)  # noqa: T201
 
     path_to_chrome_driver: str
     if chromedriver_argument is None:
         path_to_chrome_driver = chrome_driver_manager.get_chrome_driver(
-            path_to_cache_dir, verify_ssl=verify_ssl
+            path_to_cache_dir,
+            verify_ssl=verify_ssl,
+            chrome_binary=chrome_binary,
         )
     else:
         path_to_chrome_driver = chromedriver_argument
@@ -484,6 +507,8 @@ def create_webdriver(
         service = Service(path_to_chrome_driver)
 
     webdriver_options = Options()
+    if chrome_binary is not None:
+        webdriver_options.binary_location = chrome_binary
     webdriver_options.add_argument("start-maximized")
     webdriver_options.add_argument("disable-infobars")
     # Doesn't seem to be needed.
@@ -591,6 +616,11 @@ def _main() -> None:
             "By default SSL certificate verification is enabled."
         ),
     )
+    command_parser_get_driver.add_argument(
+        "--chrome-binary",
+        type=str,
+        help="Optional path to a Chrome/Chromium binary. Auto-detected if not given.",
+    )
 
     #
     # Print command.
@@ -650,6 +680,11 @@ def _main() -> None:
         ),
     )
     command_parser_print.add_argument(
+        "--chrome-binary",
+        type=str,
+        help="Optional path to a Chrome/Chromium binary. Auto-detected if not given.",
+    )
+    command_parser_print.add_argument(
         "--strict2",
         action="store_true",
         help=(
@@ -676,6 +711,7 @@ def _main() -> None:
         path_to_chrome = chrome_driver_manager.get_chrome_driver(
             path_to_cache_dir,
             verify_ssl=not args.disable_ssl_check,
+            chrome_binary=args.chrome_binary,
         )
         print(f"html2pdf4doc: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
         sys.exit(0)
@@ -695,6 +731,7 @@ def _main() -> None:
             page_load_timeout,
             verify_ssl=not args.disable_ssl_check,
             debug=args.debug,
+            chrome_binary=args.chrome_binary,
         )
 
         @atexit.register

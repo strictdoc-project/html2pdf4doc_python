@@ -1,3 +1,4 @@
+import subprocess
 import tempfile
 from typing import Any, Dict, Optional
 
@@ -10,7 +11,10 @@ from html2pdf4doc.main import ChromeDriverManager, HPDError, HPDExitCode
 
 class FailingChromeDriverManager(ChromeDriverManager):
     @staticmethod
-    def get_chrome_version() -> Optional[str]:
+    def get_chrome_version(
+        chrome_binary: Optional[str] = None,
+    ) -> Optional[str]:
+        del chrome_binary
         return None
 
 
@@ -121,3 +125,67 @@ def test_send_http_get_request_reports_ssl_hint(
         ChromeDriverManager.send_http_get_request("https://example.com")
 
     assert "--disable-ssl-check" in str(exc_info.value)
+
+
+def test_get_chrome_version_probes_explicit_binary_directly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(*args: Any, **kwargs: Any) -> Any:
+        del kwargs
+        assert args[0] == ["/opt/my-chrome/chrome", "--version"]
+        return subprocess.CompletedProcess(
+            args=args[0],
+            returncode=0,
+            stdout="Google Chrome for Testing 152.0.7977.82\n",
+        )
+
+    def fail_if_called(*args: Any, **kwargs: Any) -> Any:
+        del args, kwargs
+        raise AssertionError(
+            "OS auto-detection must not run when --chrome-binary is given"
+        )
+
+    monkeypatch.setattr("html2pdf4doc.main.subprocess.run", fake_run)
+    monkeypatch.setattr(
+        "html2pdf4doc.main.OperationSystemManager.get_browser_version_from_os",
+        fail_if_called,
+    )
+
+    version = ChromeDriverManager.get_chrome_version("/opt/my-chrome/chrome")
+
+    assert version == "152.0.7977.82"
+
+
+def test_get_chrome_version_returns_none_when_binary_is_unusable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(*args: Any, **kwargs: Any) -> Any:
+        del args, kwargs
+        raise FileNotFoundError("no such file")
+
+    monkeypatch.setattr("html2pdf4doc.main.subprocess.run", fake_run)
+
+    version = ChromeDriverManager.get_chrome_version("/does/not/exist")
+
+    assert version is None
+
+
+def test_get_chrome_driver_reports_the_bad_binary_path_when_given(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(*args: Any, **kwargs: Any) -> Any:
+        del args, kwargs
+        raise FileNotFoundError("no such file")
+
+    monkeypatch.setattr("html2pdf4doc.main.subprocess.run", fake_run)
+
+    chrome_driver_manager = ChromeDriverManager()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with pytest.raises(HPDError) as exc_info:
+            chrome_driver_manager.get_chrome_driver(
+                tmpdir, chrome_binary="/does/not/exist"
+            )
+
+    assert exc_info.value.exit_code == HPDExitCode.COULD_NOT_FIND_CHROME
+    assert "/does/not/exist" in str(exc_info.value)
