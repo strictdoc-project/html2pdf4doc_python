@@ -619,7 +619,7 @@ def _main() -> None:
     command_parser_get_driver.add_argument(
         "--chrome-binary",
         type=str,
-        help="Optional path to a Chrome/Chromium binary. Auto-detected if not given.",
+        help="Optional path to a Chrome/Chromium binary. Falls back to $HTML2PDF4DOC_CHROME_BINARY, then auto-detection.",
     )
 
     #
@@ -682,7 +682,7 @@ def _main() -> None:
     command_parser_print.add_argument(
         "--chrome-binary",
         type=str,
-        help="Optional path to a Chrome/Chromium binary. Auto-detected if not given.",
+        help="Optional path to a Chrome/Chromium binary. Falls back to $HTML2PDF4DOC_CHROME_BINARY, then auto-detection.",
     )
     command_parser_print.add_argument(
         "--strict2",
@@ -700,6 +700,10 @@ def _main() -> None:
 
     args = parser.parse_args()
 
+    chrome_binary: Optional[str] = args.chrome_binary or os.environ.get(
+        "HTML2PDF4DOC_CHROME_BINARY"
+    )
+
     chrome_driver_manager = ChromeDriverManager()
 
     path_to_cache_dir: str
@@ -711,7 +715,7 @@ def _main() -> None:
         path_to_chrome = chrome_driver_manager.get_chrome_driver(
             path_to_cache_dir,
             verify_ssl=not args.disable_ssl_check,
-            chrome_binary=args.chrome_binary,
+            chrome_binary=chrome_binary,
         )
         print(f"html2pdf4doc: ChromeDriver available at path: {path_to_chrome}")  # noqa: T201
         sys.exit(0)
@@ -731,7 +735,7 @@ def _main() -> None:
             page_load_timeout,
             verify_ssl=not args.disable_ssl_check,
             debug=args.debug,
-            chrome_binary=args.chrome_binary,
+            chrome_binary=chrome_binary,
         )
 
         @atexit.register
