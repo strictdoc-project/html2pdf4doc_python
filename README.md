@@ -41,6 +41,30 @@ python -m html2pdf4doc.main get_driver --disable-ssl-check
 python -m html2pdf4doc.main print --disable-ssl-check input.html output.pdf
 ```
 
+### Pin a specific Chrome binary
+
+Pin a specific Chrome/Chromium binary with `--chrome-binary`, for example to
+use Chrome for Testing or a binary in a non-standard location. Without this
+flag, `html2pdf4doc` auto-detects the Chrome/Chromium binary on the machine.
+
+```bash
+python -m html2pdf4doc.main get_driver --chrome-binary /path/to/chrome
+python -m html2pdf4doc.main print --chrome-binary /path/to/chrome input.html output.pdf
+```
+
+Set the `HTML2PDF4DOC_CHROME_BINARY` environment variable instead of the
+flag, for example in CI or Docker environments:
+
+```bash
+export HTML2PDF4DOC_CHROME_BINARY=/path/to/chrome
+python -m html2pdf4doc.main print input.html output.pdf
+```
+
+`html2pdf4doc` resolves the Chrome binary in this order:
+- `--chrome-binary`
+- `HTML2PDF4DOC_CHROME_BINARY`
+- auto-detection.
+
 ## Developer guide
 
 ### Getting started
