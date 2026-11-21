@@ -8,8 +8,8 @@ twine
 #
 # Lint
 #
-mypy>=2.3.1
-ruff>=0.16.6
+mypy>=2.4.0
+ruff>=0.16.10
 
 #
 # Unit tests
@@ -26,5 +26,5 @@ filecheck<1.0
 #
 # Fuzz tests
 #
-faker>=40.38.0
+faker>=40.41.0
 lxml>=6.1.3
