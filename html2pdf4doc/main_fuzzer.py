@@ -1,10 +1,10 @@
 import argparse
 import contextlib
-import datetime
 import os.path
 import random
 import shutil
 import sys
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from subprocess import CalledProcessError, CompletedProcess, TimeoutExpired, run
@@ -157,7 +157,7 @@ def mutate_and_print(
             path_to_root
         )
 
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         path_to_mut_html_out = os.path.join(
             path_to_mut_output,
             f"{relative_path_to_mut_html}.{timestamp}.html",
