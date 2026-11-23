@@ -9,7 +9,9 @@ twine
 # Lint
 #
 mypy>=2.4.0
-ruff>=0.16.10
+# A new ruff release can add lint rules that fail the CI on main and on
+# every PR. The exact version makes ruff updates arrive as Dependabot PRs.
+ruff==0.17.6
 
 #
 # Unit tests
