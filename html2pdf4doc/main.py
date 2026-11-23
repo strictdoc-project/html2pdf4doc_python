@@ -5,8 +5,10 @@ import contextlib
 import os.path
 import platform
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import warnings
 import zipfile
 from datetime import datetime
@@ -187,7 +189,6 @@ class ChromeDriverManager:
             verify_ssl,
         )
         assert os.path.isfile(path_to_downloaded_chrome_driver)
-        os.chmod(path_to_downloaded_chrome_driver, 0o755)
 
         return path_to_downloaded_chrome_driver
 
@@ -250,21 +251,92 @@ class ChromeDriverManager:
                 f"Could not download ChromeDriver from {driver_url}"
             )
 
-        Path(path_to_driver_cache_dir).mkdir(parents=True, exist_ok=True)
-        zip_path = os.path.join(path_to_driver_cache_dir, "chromedriver.zip")
-        print(  # noqa: T201
-            f"html2pdf4doc: saving downloaded ChromeDriver to path: {zip_path}"
+        cls._publish_chromedriver(
+            response.content,
+            path_to_driver_cache_dir,
+            path_to_cached_chrome_driver,
         )
-        with open(zip_path, "wb") as file:
-            file.write(response.content)
-
-        with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            zip_ref.extractall(path_to_driver_cache_dir)
 
         print(  # noqa: T201
             f"html2pdf4doc: ChromeDriver downloaded to: {path_to_cached_chrome_driver}"
         )
         return path_to_cached_chrome_driver
+
+    @staticmethod
+    def _publish_chromedriver(
+        zip_content: bytes,
+        path_to_driver_cache_dir: str,
+        path_to_cached_chrome_driver: str,
+    ) -> None:
+        """
+        Unpack a downloaded ChromeDriver into the cache folder.
+
+        Several html2pdf4doc processes can download the same ChromeDriver at
+        the same time. Each process unpacks the archive into its own temporary
+        folder and then moves the ChromeDriver folder into the cache with one
+        rename. If another process has already moved its folder there, this
+        process uses that ChromeDriver. A process never writes to a cached
+        ChromeDriver that another process may be running.
+        """
+
+        path_to_published_dir = os.path.dirname(path_to_cached_chrome_driver)
+        published_dir_name = os.path.basename(path_to_published_dir)
+
+        Path(path_to_driver_cache_dir).mkdir(parents=True, exist_ok=True)
+        # The temporary folder is in the cache folder, so the rename does not
+        # cross file systems.
+        path_to_tmp_dir = tempfile.mkdtemp(
+            prefix=".chromedriver-download-", dir=path_to_driver_cache_dir
+        )
+        try:
+            zip_path = os.path.join(path_to_tmp_dir, "chromedriver.zip")
+            print(  # noqa: T201
+                f"html2pdf4doc: saving downloaded ChromeDriver to path: {zip_path}"
+            )
+            with open(zip_path, "wb") as file:
+                file.write(zip_content)
+
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                zip_ref.extractall(path_to_tmp_dir)
+
+            path_to_tmp_driver_dir = os.path.join(
+                path_to_tmp_dir, published_dir_name
+            )
+            path_to_tmp_driver = os.path.join(
+                path_to_tmp_driver_dir,
+                os.path.basename(path_to_cached_chrome_driver),
+            )
+            if not os.path.isfile(path_to_tmp_driver):
+                raise RuntimeError(
+                    f"The downloaded ChromeDriver archive does not contain: "
+                    f"{published_dir_name}/"
+                    f"{os.path.basename(path_to_cached_chrome_driver)}"
+                )
+            # zipfile does not restore the executable bit.
+            os.chmod(path_to_tmp_driver, 0o755)
+
+            # A folder without the ChromeDriver is a leftover of an older
+            # html2pdf4doc version that stopped while unpacking in place.
+            # The rename below handles a folder that another process moves
+            # there in the meantime, so errors of the removal do not matter.
+            if os.path.isdir(path_to_published_dir) and not os.path.isfile(
+                path_to_cached_chrome_driver
+            ):
+                shutil.rmtree(path_to_published_dir, ignore_errors=True)
+
+            try:
+                os.rename(path_to_tmp_driver_dir, path_to_published_dir)
+            except OSError:
+                # On Windows, the rename fails if the target exists. On
+                # Linux and macOS, it fails if the target is not empty.
+                if not os.path.isfile(path_to_cached_chrome_driver):
+                    raise
+                print(  # noqa: T201
+                    "html2pdf4doc: another process has already cached the "
+                    f"ChromeDriver: {path_to_cached_chrome_driver}"
+                )
+        finally:
+            shutil.rmtree(path_to_tmp_dir, ignore_errors=True)
 
     @staticmethod
     def send_http_get_request(url: str, verify_ssl: bool = True) -> Response:

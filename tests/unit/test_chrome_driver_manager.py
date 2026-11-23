@@ -1,5 +1,9 @@
+import io
+import os
 import subprocess
+import sys
 import tempfile
+import zipfile
 from typing import Any, Dict, Optional
 
 import pytest
@@ -189,3 +193,107 @@ def test_get_chrome_driver_reports_the_bad_binary_path_when_given(
 
     assert exc_info.value.exit_code == HPDExitCode.COULD_NOT_FIND_CHROME
     assert "/does/not/exist" in str(exc_info.value)
+
+
+def _make_chromedriver_zip(file_names: Dict[str, bytes]) -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as zip_file:
+        for file_name_, content_ in file_names.items():
+            zip_file.writestr(file_name_, content_)
+    return buffer.getvalue()
+
+
+def _get_cache_paths(path_to_cache_dir: str) -> Dict[str, str]:
+    path_to_driver_cache_dir = os.path.join(path_to_cache_dir, "151")
+    return {
+        "driver_cache_dir": path_to_driver_cache_dir,
+        "driver": os.path.join(
+            path_to_driver_cache_dir, "chromedriver-linux64", "chromedriver"
+        ),
+    }
+
+
+def test_publish_chromedriver_to_empty_cache() -> None:
+    zip_content = _make_chromedriver_zip(
+        {"chromedriver-linux64/chromedriver": b"downloaded"}
+    )
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        paths = _get_cache_paths(tmpdir)
+
+        ChromeDriverManager._publish_chromedriver(
+            zip_content, paths["driver_cache_dir"], paths["driver"]
+        )
+
+        with open(paths["driver"], "rb") as driver_file:
+            assert driver_file.read() == b"downloaded"
+        if sys.platform != "win32":
+            assert os.access(paths["driver"], os.X_OK)
+        # The temporary download folder is removed.
+        assert os.listdir(paths["driver_cache_dir"]) == ["chromedriver-linux64"]
+
+
+def test_publish_chromedriver_keeps_driver_cached_by_another_process() -> None:
+    """
+    Another process has cached the ChromeDriver while this process was
+    downloading it. The cached ChromeDriver must stay untouched because the
+    other process may be running it.
+    """
+
+    zip_content = _make_chromedriver_zip(
+        {"chromedriver-linux64/chromedriver": b"downloaded"}
+    )
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        paths = _get_cache_paths(tmpdir)
+        os.makedirs(os.path.dirname(paths["driver"]))
+        with open(paths["driver"], "wb") as driver_file:
+            driver_file.write(b"cached by another process")
+
+        ChromeDriverManager._publish_chromedriver(
+            zip_content, paths["driver_cache_dir"], paths["driver"]
+        )
+
+        with open(paths["driver"], "rb") as driver_file:
+            assert driver_file.read() == b"cached by another process"
+        assert os.listdir(paths["driver_cache_dir"]) == ["chromedriver-linux64"]
+
+
+def test_publish_chromedriver_replaces_leftover_folder_without_driver() -> None:
+    zip_content = _make_chromedriver_zip(
+        {"chromedriver-linux64/chromedriver": b"downloaded"}
+    )
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        paths = _get_cache_paths(tmpdir)
+        path_to_driver_dir = os.path.dirname(paths["driver"])
+        os.makedirs(path_to_driver_dir)
+        with open(
+            os.path.join(path_to_driver_dir, "LICENSE.chromedriver"), "wb"
+        ) as license_file:
+            license_file.write(b"leftover")
+
+        ChromeDriverManager._publish_chromedriver(
+            zip_content, paths["driver_cache_dir"], paths["driver"]
+        )
+
+        with open(paths["driver"], "rb") as driver_file:
+            assert driver_file.read() == b"downloaded"
+        assert os.listdir(path_to_driver_dir) == ["chromedriver"]
+
+
+def test_publish_chromedriver_raises_when_archive_has_no_driver() -> None:
+    zip_content = _make_chromedriver_zip(
+        {"chromedriver-linux64/LICENSE.chromedriver": b"license"}
+    )
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        paths = _get_cache_paths(tmpdir)
+
+        with pytest.raises(RuntimeError) as exc_info:
+            ChromeDriverManager._publish_chromedriver(
+                zip_content, paths["driver_cache_dir"], paths["driver"]
+            )
+
+        assert "chromedriver-linux64/chromedriver" in str(exc_info.value)
+        assert os.listdir(paths["driver_cache_dir"]) == []
